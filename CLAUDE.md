@@ -34,13 +34,16 @@ PDF 遊戲規則文件轉換成繁體中文 Markdown 文件網站。
 
 **Law 7: Traditional Chinese Only**
 - 所有輸出必須使用繁體中文
+- 翻譯目標語言固定為 zh-TW（台灣用語）
 - 禁止使用簡體中文
+- 禁止使用中國大陸慣用詞
 - 術語翻譯須保持一致性
 
 **Law 8: Terminology Consistency**
 - 必須遵循 `glossary.json` 中的術語對照
 - 發現新術語時必須先加入術語表再使用
 - 翻譯時尊重原文意涵，避免過度意譯
+- 英文專有名詞（人名、地名、組織名、品牌名、產品名）必須保留原文，不得翻譯
 </law>
 
 ## Quick Reference
