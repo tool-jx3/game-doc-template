@@ -263,7 +263,26 @@ uv run python scripts/term_generate.py --min-frequency 2
 
 Present terms to user for translation confirmation.
 
-### 7. Build Glossary (Single Source of Truth)
+### 7. Configure Proper Noun Translation Policy (Required)
+
+Before building the glossary, ask user to choose proper noun handling policy:
+
+1. Keep original names by default
+2. Translate names when official/accepted Chinese forms exist
+3. Prefer translated names, with original in parentheses on first mention
+
+Record the decision in `style-decisions.json`:
+
+```json
+{
+  "proper_nouns": {
+    "mode": "keep_original | official_only | translate_with_original_first",
+    "reason": "user preference"
+  }
+}
+```
+
+### 8. Build Glossary (Single Source of Truth)
 
 Create `glossary.json` with confirmed terms:
 
@@ -291,13 +310,13 @@ Rules:
 
 Ask user about style preferences and record in `style-decisions.json`.
 
-### 8. Split Content
+### 9. Split Content
 
 ```bash
 uv run python scripts/split_chapters.py
 ```
 
-### 9. Generate Homepage index.md from style-decisions.json
+### 10. Generate Homepage index.md from style-decisions.json
 
 Before chapter splitting, create/update `docs/src/content/docs/index.md` using project metadata and style decisions.
 
@@ -311,7 +330,7 @@ Before chapter splitting, create/update `docs/src/content/docs/index.md` using p
    - If `visibility=private`, do not render repo link.
 4. Keep this logic data-driven: homepage content must follow `style-decisions.json` as source of truth.
 
-### 10. Analyze and Split index.md
+### 11. Analyze and Split index.md
 
 After initial split, analyze the generated `index.md` to create proper chapter structure:
 
@@ -347,7 +366,7 @@ After initial split, analyze the generated `index.md` to create proper chapter s
    ---
    ```
 
-### 11. Configure Chapters
+### 12. Configure Chapters
 
 Finalize `chapters.json` after all splits are done:
 1. Show table of contents from PDF and actual generated files
@@ -355,13 +374,13 @@ Finalize `chapters.json` after all splits are done:
 3. Map page ranges and file paths to output files
 4. Ensure order matches `sidebar.order` and actual navigation
 
-### 12. Verify
+### 13. Verify
 
 - Check generated files in `docs/src/content/docs/`
 - Verify sidebar order matches original TOC
 - Preview: `cd docs && bun dev`
 
-### 13. Record Configuration
+### 14. Record Configuration
 
 Save all visual settings to `style-decisions.json`:
 
@@ -383,6 +402,10 @@ Save all visual settings to `style-decisions.json`:
     "tertiary_h": 260,
     "quaternary_h": 200
   },
+  "proper_nouns": {
+    "mode": "official_only",
+    "reason": "使用者偏好官方或通行譯名"
+  },
   "repository": {
     "visibility": "public",
     "url": "https://github.com/<username>/<project_name>",
@@ -391,7 +414,7 @@ Save all visual settings to `style-decisions.json`:
 }
 ```
 
-### 14. Final Cleanup and Sidebar Refresh
+### 15. Final Cleanup and Sidebar Refresh
 
 After cropping and split operations are complete:
 
@@ -409,14 +432,15 @@ After cropping and split operations are complete:
 - [ ] Step 4: 已完成圖片挑選與資產複製（hero/background/og）
 - [ ] Step 5: 已完成視覺主題設定（背景模式、遮罩、色票）
 - [ ] Step 6: 已完成術語盤點，並以繁體中文與使用者確認
-- [ ] Step 7: 已更新 `glossary.json` 與風格決策
-- [ ] Step 8: 已完成初始章節拆分（`split_chapters.py`）
-- [ ] Step 9: 已依 `style-decisions.json` 產生首頁 `index.md`（含 repo link 顯示規則）
-- [ ] Step 10: 已完成 `index.md` 分析與章節拆分落檔
-- [ ] Step 11: 已完成 `chapters.json` 最終配置，且順序與 sidebar 一致
-- [ ] Step 12: 已完成文件預覽驗證（目錄、連結、顯示）
-- [ ] Step 13: 已更新 `style-decisions.json` 設定紀錄
-- [ ] Step 14: 已移除不必要範例文件並重整 sidebar
+- [ ] Step 7: 已與使用者確認專有名詞翻譯策略並寫入 `style-decisions.json`
+- [ ] Step 8: 已更新 `glossary.json` 與風格決策
+- [ ] Step 9: 已完成初始章節拆分（`split_chapters.py`）
+- [ ] Step 10: 已依 `style-decisions.json` 產生首頁 `index.md`（含 repo link 顯示規則）
+- [ ] Step 11: 已完成 `index.md` 分析與章節拆分落檔
+- [ ] Step 12: 已完成 `chapters.json` 最終配置，且順序與 sidebar 一致
+- [ ] Step 13: 已完成文件預覽驗證（目錄、連結、顯示）
+- [ ] Step 14: 已更新 `style-decisions.json` 設定紀錄
+- [ ] Step 15: 已移除不必要範例文件並重整 sidebar
 - [ ] Gate: 已確認全程與使用者互動皆為繁體中文
 
 ## Example Usage

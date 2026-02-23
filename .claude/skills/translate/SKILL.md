@@ -66,6 +66,7 @@ Scope options:
 Read:
 - `glossary.json` - term mappings
 - `style-decisions.json` - style choices
+- `style-decisions.json.proper_nouns.mode` - proper noun translation policy selected during `/init-doc`
 
 ### 4. Translate Content
 

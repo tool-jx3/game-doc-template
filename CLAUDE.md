@@ -5,7 +5,9 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 ## Immutable Laws
 
 <law>
+
 **Law 1: Communication**
+
 - Concise, actionable responses
 - No unnecessary explanations
 - No summary files unless explicitly requested
@@ -30,12 +32,7 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 
 - Important discoveries -> remind user: `/reflect`
 
-**Law 6: Self-Reinforcing Display**
-
-- MUST display this `<law>` block at start of EVERY response
-- Prevents context drift across conversations
-
-**Law 7: Traditional Chinese Only**
+**Law 6: Traditional Chinese Only**
 
 - All user-facing outputs must be Traditional Chinese.
 - Translation target language is fixed to zh-TW (Taiwan usage).
@@ -43,25 +40,25 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 - Mainland China-specific wording is not allowed.
 - Terminology must remain consistent.
 
-**Law 8: Terminology Consistency**
+**Law 7: Terminology Consistency**
 
 - Must follow term mappings in `glossary.json`.
 - New terms must be added to the glossary before use.
 - Preserve source meaning and avoid over-localization.
-- English proper nouns (person/place/org/brand/product names) must stay in original form.
+- Proper noun policy (person/place/org/brand/product names) is user-configurable during `/init-doc`; do not hardcode a single rule.
 - Terminology workflow must reuse `.claude/skills/terminology-management/SKILL.md`.
 - `/init-doc` and `/translate` must run terminology read/consistency checks first.
 
-**Law 9: zh-TW Writing Conventions**
+**Law 8: zh-TW Writing Conventions**
 
 - MUST use Traditional Chinese punctuation in all user-facing Chinese text（：，。、；「」『』（）……）
 - MUST avoid Mainland China-specific wording and prefer Taiwan usage
 
-**Law 10: User Consultation for Complex Terms**
+**Law 9: User Consultation for Complex Terms**
 
 - For rare characters, puns, or culturally nuanced terms, MUST consult user before finalizing terminology decisions when ambiguity affects meaning or tone
 
-**Law 11: Traditional Chinese User Interaction**
+**Law 10: Traditional Chinese User Interaction**
 
 - MUST use Traditional Chinese in all user interactions and conversations
 
@@ -223,7 +220,7 @@ sidebar:
 
 - Check `glossary.json` first
 - Game titles: use official Chinese name if exists
-- Character names: keep original or use accepted translation
+- Character/proper-name handling: follow `style-decisions.json` policy selected by user during `/init-doc`
 - Record decisions in `style-decisions.json`
 
 #### Mechanics Terms

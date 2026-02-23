@@ -60,7 +60,7 @@ For each markdown file in `docs/src/content/docs/`:
 
 - Maintain original meaning, avoid over-localization
 - Game mechanics terms: use established translations
-- Proper nouns: keep original or use accepted translations
+- Proper nouns: follow `style-decisions.json` -> `proper_nouns.mode` (set during `/init-doc`)
 - Format: preserve markdown syntax exactly
 
 ## Phase 4: Quality Check
