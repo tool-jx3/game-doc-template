@@ -17,6 +17,21 @@ Use `pdf-translation` and `terminology-management` skills.
 
 ## Process
 
+### 0. Clean Sample Data (Required)
+
+Before initialization, clear template/sample outputs:
+
+```bash
+uv run python scripts/clean_sample_data.py --yes
+```
+
+This cleanup removes:
+- `data/markdown/*` (extracted markdown/images)
+- `docs/src/content/docs/**/*.md|.mdx` (template docs content)
+- resets `glossary.json` to an empty glossary skeleton (`_meta` only)
+
+It does **not** remove `data/pdfs/*`.
+
 ### 1. Locate PDF
 
 If no `$ARGUMENTS` provided, ask user for PDF location in `data/pdfs/`.

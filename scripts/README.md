@@ -23,6 +23,15 @@ pip install markitdown pymupdf
 
 ## 工作流程
 
+### 0. 清除範例資料（建議先執行）
+
+```bash
+uv run python scripts/clean_sample_data.py --yes
+```
+
+會清除既有提取結果與範例 docs 內容，但不會刪除 `data/pdfs/` 的來源 PDF。
+同時會重置 `glossary.json` 為空白術語表（保留 `_meta`）。
+
 ### 1. 提取 PDF 內容
 
 ```bash

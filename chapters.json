@@ -1,0 +1,82 @@
+{
+  "source": "data/markdown/Cairn_pages.md",
+  "output_dir": "docs/src/content/docs",
+  "clean_patterns": [
+    "\\(Order #\\d+\\)",
+    "Page \\d+ of \\d+"
+  ],
+  "chapters": {
+    "reference": {
+      "title": "快速參考",
+      "order": 1,
+      "files": {
+        "index": {
+          "title": "系統總覽",
+          "description": "Cairn 核心概念與快速導覽",
+          "pages": [1, 2],
+          "order": 0
+        }
+      }
+    },
+    "rules": {
+      "title": "核心規則",
+      "order": 2,
+      "files": {
+        "index": {
+          "title": "核心機制",
+          "description": "判定、行動與基本流程",
+          "pages": [3, 5],
+          "order": 0
+        }
+      }
+    },
+    "characters": {
+      "title": "角色",
+      "order": 3,
+      "files": {
+        "index": {
+          "title": "角色建立",
+          "description": "能力值、背景與角色特徵",
+          "pages": [6, 10],
+          "order": 0
+        }
+      }
+    },
+    "items": {
+      "title": "物品與裝備",
+      "order": 4,
+      "files": {
+        "index": {
+          "title": "裝備與法術",
+          "description": "物品欄、武器、防具與法術書",
+          "pages": [11, 14],
+          "order": 0
+        }
+      }
+    },
+    "world": {
+      "title": "世界設定",
+      "order": 5,
+      "files": {
+        "index": {
+          "title": "危險與對抗",
+          "description": "戰鬥、傷害與遭遇處理",
+          "pages": [15, 20],
+          "order": 0
+        }
+      }
+    },
+    "guides": {
+      "title": "主持人指南",
+      "order": 6,
+      "files": {
+        "index": {
+          "title": "主持與速查",
+          "description": "主持人建議與表格速查",
+          "pages": [21, 24],
+          "order": 0
+        }
+      }
+    }
+  }
+}

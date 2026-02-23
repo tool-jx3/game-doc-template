@@ -9,7 +9,7 @@ import starlight from '@astrojs/starlight';
 
 const SITE_CONFIG = {
 	// 網站標題（顯示在導航列）
-	title: '遊戲名稱',
+	title: 'Cairn',
 	// 預設語言
 	defaultLocale: 'zh-TW',
 	localeLabel: '繁體中文',

@@ -113,6 +113,7 @@ const SITE_CONFIG = {
 ```
 
 完整初始化流程：
+- 清除範例資料（`data/markdown/`、`docs/src/content/docs/`）
 - 提取 PDF 內容與圖片
 - 選擇 Hero、背景、OG 圖片
 - 設定背景色調與遮罩
@@ -173,6 +174,19 @@ uv run python scripts/split_chapters.py
 ```
 
 `uv sync` 會在專案根目錄建立 `.venv` 與 `uv.lock`，之後所有 Python 腳本請從根目錄以 `uv run python scripts/...` 執行。
+
+### 清除範例資料（可選）
+
+```bash
+uv run python scripts/clean_sample_data.py --yes
+```
+
+會清除：
+- `data/markdown/*`
+- `docs/src/content/docs/**/*.md|.mdx`
+
+不會清除：
+- `data/pdfs/*`（授權來源 PDF）
 
 ---
 

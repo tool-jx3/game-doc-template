@@ -1,10 +1,10 @@
 {
   "_meta": {
     "description": "風格決定記錄 - 翻譯用語選擇與原因",
-    "updated": ""
+    "updated": "2026-02-23"
   },
   "translation_mode": {
-    "mode": null,
+    "mode": "full",
     "options": {
       "full": {
         "name": "全文翻譯",
@@ -15,6 +15,6 @@
         "description": "精簡翻譯，提取重點規則，省略範例與冗長說明"
       }
     },
-    "reason": ""
+    "reason": "使用者要求繼續完成所有翻譯，並以完整可發布內容為目標。"
   }
 }
