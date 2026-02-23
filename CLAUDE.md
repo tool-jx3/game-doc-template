@@ -61,6 +61,10 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 
 - For rare characters, puns, or culturally nuanced terms, MUST consult user before finalizing terminology decisions when ambiguity affects meaning or tone
 
+**Law 11: Traditional Chinese User Interaction**
+
+- MUST use Traditional Chinese in all user interactions and conversations
+
 </law>
 
 ## Quick Reference
