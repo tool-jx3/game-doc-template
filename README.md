@@ -52,21 +52,21 @@ bun dev
 
 ```javascript
 const SITE_CONFIG = {
-  title: '您的遊戲名稱',
-  defaultLocale: 'zh-TW',
-  localeLabel: '繁體中文',
-  allowIndexing: false,  // SEO 設定
+  title: "您的遊戲名稱",
+  defaultLocale: "zh-TW",
+  localeLabel: "繁體中文",
+  allowIndexing: false, // SEO 設定
 };
 ```
 
 ### 圖片資源
 
-| 檔案 | 位置 | 說明 |
-|------|------|------|
-| 背景圖 | `docs/public/bg.jpg` | 1920x1080，深色低對比度為佳 |
-| 社群分享圖 | `docs/public/og-image.jpg` | 1200x630 |
-| 首頁主圖 | `docs/src/assets/hero.jpg` | 560x560，會裁切成圓形 |
-| 網站圖示 | `docs/public/favicon.svg` | 32x32 |
+| 檔案       | 位置                       | 說明                        |
+| ---------- | -------------------------- | --------------------------- |
+| 背景圖     | `docs/public/bg.jpg`       | 1920x1080，深色低對比度為佳 |
+| 社群分享圖 | `docs/public/og-image.jpg` | 1200x630                    |
+| 首頁主圖   | `docs/src/assets/hero.jpg` | 560x560，會裁切成圓形       |
+| 網站圖示   | `docs/public/favicon.svg`  | 32x32                       |
 
 ### 背景圖設定
 
@@ -82,6 +82,7 @@ const SITE_CONFIG = {
 編輯 `docs/src/styles/custom.css` 的 `:root` 區塊修改顏色變數。
 
 預設色票風格（只需修改 H 值）：
+
 - **冷色系**：藍青紫，適合科幻、海洋、神秘
 - **暖色系**：橘金紅，適合冒險、戰鬥、熱情
 - **自然系**：綠黃棕，適合奇幻、森林、治癒
@@ -94,9 +95,15 @@ const SITE_CONFIG = {
 
 ---
 
-## 使用 AI 輔助翻譯（需安裝 Claude Code）
+## 使用 AI 輔助翻譯（支援 Claude Code、Codex CLI、Gemini CLI）
 
-本專案內建 AI 輔助翻譯工具，透過 Claude Code 執行以下命令：
+本專案內建 AI 輔助翻譯工具，支援以下 CLI：
+
+- Claude Code
+- Codex CLI
+- Gemini CLI（`.gemini/settings.json` 指向 `CLAUDE.md`）
+
+可透過上述 CLI 執行以下命令：
 
 ### 建立新專案
 
@@ -113,6 +120,7 @@ const SITE_CONFIG = {
 ```
 
 完整初始化流程：
+
 - 清除範例資料（`data/markdown/`、`docs/src/content/docs/`）
 - 提取 PDF 內容與圖片
 - 選擇 Hero、背景、OG 圖片
@@ -182,10 +190,12 @@ uv run python scripts/clean_sample_data.py --yes
 ```
 
 會清除：
+
 - `data/markdown/*`
 - `docs/src/content/docs/**/*.md|.mdx`
 
 不會清除：
+
 - `data/pdfs/*`（授權來源 PDF）
 
 ---
