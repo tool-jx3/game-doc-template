@@ -1,0 +1,12 @@
+description = "翻譯章節或檔案（映射到 translate skill）"
+prompt = """
+Use the `translate` skill from workspace skills at `.gemini/skills/translate/SKILL.md`.
+Follow that skill exactly end-to-end.
+
+User arguments: {{args}}
+
+Requirements:
+- Interact with user in Traditional Chinese.
+- Run terminology checks before translation according to project rules.
+- Report concrete file changes and executed commands.
+"""

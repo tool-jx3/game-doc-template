@@ -1,0 +1,12 @@
+description = "初始化翻譯專案（映射到 init-doc skill）"
+prompt = """
+Use the `init-doc` skill from workspace skills at `.gemini/skills/init-doc/SKILL.md`.
+Follow that skill exactly end-to-end.
+
+User arguments: {{args}}
+
+Requirements:
+- Interact with user in Traditional Chinese.
+- Perform terminology preflight according to project rules.
+- Report concrete file changes and executed commands.
+"""

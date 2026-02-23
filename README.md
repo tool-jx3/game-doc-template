@@ -97,68 +97,48 @@ const SITE_CONFIG = {
 
 ## 使用 AI 輔助翻譯（支援 Claude Code、Codex CLI、Gemini CLI）
 
-本專案內建 AI 輔助翻譯工具，支援以下 CLI：
+本專案已內建：
 
-- Claude Code
-- Codex CLI
-- Gemini CLI（`.gemini/settings.json` 指向 `CLAUDE.md`）
+- `AGENTS.md -> CLAUDE.md`
+- `.gemini/settings.json`（`context.fileName = "CLAUDE.md"`）
+- `.gemini/skills -> .claude/skills`
+- `.gemini/commands/*.toml`（將 slash 指令映射到既有 skills）
 
-可透過上述 CLI 執行以下命令：
+### 使用原則
 
-### 建立新專案
+- 建議流程：`new-project` → `init-doc` → `translate`
+- 翻譯前先確認術語（`glossary.json`），交付前執行一致性與完整性檢查
 
-```
-/new-project ~/Downloads/your-game.pdf
-```
+### 快速開始
 
-從模板建立新專案，自動建立 GitHub 私人 repo 並複製 PDF。
+1. 建立新專案
 
-### 初始化翻譯專案
-
-```
-/init-doc
+```bash
+new-project ~/Downloads/your-game.pdf
 ```
 
-完整初始化流程：
+2. 初始化資料與術語
 
-- 清除範例資料（`data/markdown/`、`docs/src/content/docs/`）
-- 提取 PDF 內容與圖片
-- 選擇 Hero、背景、OG 圖片
-- 設定背景色調與遮罩
-- 選擇色票風格（冷色、暖色、自然、暗黑、史詩）
-- 建立術語表與章節結構
-
-### 開始翻譯（最重要）
-
-```
-/translate
+```bash
+init-doc
 ```
 
-開始翻譯指定章節或檔案，是日常翻譯流程的主要指令。
+3. 開始翻譯
 
-### 術語一致性校對
-
-```
-/check-consistency
+```bash
+translate
 ```
 
-檢查所有文件的術語使用是否一致。
+### 常用指令對照
 
-### 用語決定與批量替換
-
-```
-/term-decision
-```
-
-選擇術語翻譯方式並全文替換。
-
-### 完整性檢查
-
-```
-/check-completeness
-```
-
-確認規則內容是否有缺漏。
+| 功能 | 指令 |
+| --- | --- |
+| 建立新專案 | `new-project <pdf-path>` |
+| 初始化翻譯專案 | `init-doc` |
+| 翻譯章節或檔案 | `translate [target]` |
+| 術語一致性檢查 | `check-consistency` |
+| 術語決策與批次替換 | `term-decision` |
+| 內容完整性檢查 | `check-completeness` |
 
 ---
 

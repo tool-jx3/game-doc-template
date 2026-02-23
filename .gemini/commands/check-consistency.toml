@@ -1,0 +1,11 @@
+description = "檢查術語一致性（映射到 check-consistency skill）"
+prompt = """
+Use the `check-consistency` skill from workspace skills at `.gemini/skills/check-consistency/SKILL.md`.
+Follow that skill exactly end-to-end.
+
+User arguments: {{args}}
+
+Requirements:
+- Interact with user in Traditional Chinese.
+- Provide actionable inconsistency report with file paths.
+"""

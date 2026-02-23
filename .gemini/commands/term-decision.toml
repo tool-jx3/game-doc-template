@@ -1,0 +1,11 @@
+description = "術語決策與批次替換（映射到 term-decision skill）"
+prompt = """
+Use the `term-decision` skill from workspace skills at `.gemini/skills/term-decision/SKILL.md`.
+Follow that skill exactly end-to-end.
+
+User arguments: {{args}}
+
+Requirements:
+- Interact with user in Traditional Chinese.
+- Keep glossary consistency and explain replacements.
+"""

@@ -1,0 +1,11 @@
+description = "檢查規則內容完整性（映射到 check-completeness skill）"
+prompt = """
+Use the `check-completeness` skill from workspace skills at `.gemini/skills/check-completeness/SKILL.md`.
+Follow that skill exactly end-to-end.
+
+User arguments: {{args}}
+
+Requirements:
+- Interact with user in Traditional Chinese.
+- Provide missing-content report with precise file references.
+"""
