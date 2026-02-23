@@ -1,15 +1,21 @@
 ---
 name: init-doc
-description: 初次摘要 - 初始化文件翻譯專案，建立術語表與章節結構
+description: Initial summary - initialize the document translation project, build glossary and chapter structure
 arguments:
   - name: pdf_path
-    description: PDF 檔案路徑（可選，會互動詢問）
+    description: PDF file path (optional, will ask interactively)
     required: false
 ---
 
 # Initialize Document Translation
 
 Use `pdf-translation` and `terminology-management` skills.
+
+## Interaction Rules
+
+- Always interact with the user in Traditional Chinese (繁體中文).
+- All AskUserQuestion prompts and conversational text shown to the user must be in Traditional Chinese.
+- Do not use Simplified Chinese.
 
 ## Process
 
@@ -28,45 +34,59 @@ Review output in `data/markdown/`:
 - `<name>.md` - clean version
 - `<name>_pages.md` - with page markers
 
-### 3. Extract and Select Images
+### 3. Review PDF Cropping and Split into Manageable Parts
 
-#### 3.1 Extract Images from PDF
+After PDF cropping is completed, review the cropped result before continuing:
+
+1. Inspect the cropped output for readability issues:
+   - text clipped at margins
+   - missing headers/footers needed for context
+   - broken diagrams/tables
+2. If the cropped PDF is too large, split it into suitable parts:
+   - split by natural chapter boundaries when possible
+   - keep each part at a manageable size (recommended: ~15-30 pages per part)
+3. Save split PDF parts with clear names (for example `part-01-intro.pdf`, `part-02-core-rules.pdf`).
+4. Re-run extraction for each split part if needed, and ensure resulting markdown files are complete.
+
+### 4. Extract and Select Images
+
+#### 4.1 Extract Images from PDF
 
 Images are automatically extracted during step 2 (`extract_pdf.py`).
 
 Images saved to `data/markdown/images/<pdf_name>/`.
 
-#### 3.2 Present Images to User
+#### 4.2 Present Images to User
 
 List all extracted images with thumbnails or descriptions:
 
 ```
 找到以下圖片：
-1. image_001.jpg (封面, 1200x800)
-2. image_002.png (角色插圖, 600x400)
-3. image_003.jpg (地圖, 1000x700)
+1. image_001.jpg（封面，1200x800）
+2. image_002.png（角色插圖，600x400）
+3. image_003.jpg（地圖，1000x700）
 ...
 
 請選擇用途：
 ```
 
-#### 3.3 Ask Image Assignments
+#### 4.3 Ask Image Assignments
 
-Use AskUserQuestion to ask for each image type:
+Use AskUserQuestion for each image type:
 
-**Hero Image** (首頁主圖，會裁切成圓形):
-- 建議：選擇主視覺、角色、或標誌性圖像
-- 存放位置：`docs/src/assets/hero.jpg`
+**Hero Image** (homepage main image, cropped into a circle):
+- Recommendation: choose a key visual, character, or iconic image
+- Location: `docs/src/assets/hero.jpg`
 
-**Background Image** (背景圖):
-- 建議：選擇氛圍圖、場景圖、或紋理
-- 存放位置：`docs/public/bg.jpg`
+**Background Image**:
+- Recommendation: choose an atmosphere image, scene image, or texture
+- Location: `docs/public/bg.jpg`
 
-**OG Image** (社群分享預覽圖):
-- 建議：1200x630 最佳，選擇能代表遊戲的圖
-- 存放位置：`docs/public/og-image.jpg`
+**OG Image** (social sharing preview image):
+- Recommendation: 1200x630 is ideal, choose an image that represents the game
+- Location: `docs/public/og-image.jpg`
 
-#### 3.4 Process Selected Images
+#### 4.4 Process Selected Images
 
 Copy selected images to appropriate locations:
 
@@ -81,9 +101,9 @@ cp data/markdown/images/<pdf_name>/<selected_bg>.jpg docs/public/bg.jpg
 cp data/markdown/images/<pdf_name>/<selected_og>.jpg docs/public/og-image.jpg
 ```
 
-### 4. Configure Visual Theme
+### 5. Configure Visual Theme
 
-#### 4.1 Background Mode
+#### 5.1 Background Mode
 
 Use AskUserQuestion:
 
@@ -91,13 +111,13 @@ Use AskUserQuestion:
 背景色調設定：
 
 選項：
-1. 深色模式 (Dark) - 適合大多數遊戲，神秘、沉浸感
-2. 淺色模式 (Light) - 清新、明亮風格
+1. 深色模式（Dark）- 適合大多數遊戲，神祕且有沉浸感
+2. 淺色模式（Light）- 清新、明亮風格
 
 目前背景圖的主色調是什麼？
 ```
 
-#### 4.2 Overlay Settings
+#### 5.2 Overlay Settings
 
 Based on background image analysis, ask:
 
@@ -109,7 +129,7 @@ Based on background image analysis, ask:
 1. 需要深色遮罩 - 背景太亮，文字可能不清楚
 2. 需要淺色遮罩 - 背景太深但想要淺色主題
 3. 不需要遮罩 - 背景對比度適中
-4. 自訂遮罩透明度 (0-1)
+4. 自訂遮罩透明度（0-1）
 
 建議：通常 0.6-0.8 的遮罩效果最佳
 ```
@@ -117,11 +137,11 @@ Based on background image analysis, ask:
 Update `docs/src/styles/custom.css`:
 
 ```css
-/* 遮罩透明度 */
+/* Overlay opacity */
 --overlay-opacity: <user_choice>;
 ```
 
-#### 4.3 Color Palette Design
+#### 5.3 Color Palette Design
 
 Use AskUserQuestion to determine color style:
 
@@ -130,75 +150,75 @@ Use AskUserQuestion to determine color style:
 
 請選擇適合遊戲氛圍的色彩風格：
 
-1. 🌊 冷色系 (Cool)
+1. 🌊 冷色系（Cool）
    - 主色：藍色系
-   - 適合：科幻、海洋、冬季、神秘
+   - 適合：科幻、海洋、冬季、神祕
 
-2. 🔥 暖色系 (Warm)
+2. 🔥 暖色系（Warm）
    - 主色：橘紅色系
    - 適合：冒險、沙漠、戰鬥、熱情
 
-3. 🌲 自然系 (Nature)
+3. 🌲 自然系（Nature）
    - 主色：綠色系
-   - 適合：奇幻、森林、生態、治癒
+   - 適合：奇幻、森林、生態、療癒
 
-4. 🌙 暗黑系 (Dark)
+4. 🌙 暗黑系（Dark）
    - 主色：紫黑色系
    - 適合：恐怖、哥德、死亡、邪惡
 
-5. ⚔️ 史詩系 (Epic)
+5. ⚔️ 史詩系（Epic）
    - 主色：金色系
    - 適合：中世紀、王國、戰爭、榮耀
 
-6. 🎨 自訂 (Custom)
+6. 🎨 自訂（Custom）
    - 提供主色 HEX 或描述風格
 ```
 
-#### 4.4 Generate Color Variables
+#### 5.4 Generate Color Variables
 
-Based on user choice, generate HSL color scheme:
+Based on user choice, generate an HSL color scheme:
 
-**冷色系 (Cool)**:
+**Cool**:
 ```css
---color-primary-h: 217;   /* 藍 */
---color-secondary-h: 180; /* 青 */
---color-tertiary-h: 260;  /* 紫 */
---color-quaternary-h: 200; /* 天藍 */
+--color-primary-h: 217;   /* Blue */
+--color-secondary-h: 180; /* Cyan */
+--color-tertiary-h: 260;  /* Purple */
+--color-quaternary-h: 200; /* Sky blue */
 ```
 
-**暖色系 (Warm)**:
+**Warm**:
 ```css
---color-primary-h: 25;    /* 橘 */
---color-secondary-h: 45;  /* 金 */
---color-tertiary-h: 0;    /* 紅 */
---color-quaternary-h: 350; /* 玫瑰 */
+--color-primary-h: 25;    /* Orange */
+--color-secondary-h: 45;  /* Gold */
+--color-tertiary-h: 0;    /* Red */
+--color-quaternary-h: 350; /* Rose */
 ```
 
-**自然系 (Nature)**:
+**Nature**:
 ```css
---color-primary-h: 142;   /* 綠 */
---color-secondary-h: 80;  /* 黃綠 */
---color-tertiary-h: 30;   /* 棕 */
---color-quaternary-h: 160; /* 青綠 */
+--color-primary-h: 142;   /* Green */
+--color-secondary-h: 80;  /* Yellow-green */
+--color-tertiary-h: 30;   /* Brown */
+--color-quaternary-h: 160; /* Teal */
 ```
 
-**暗黑系 (Dark)**:
+**Dark**:
 ```css
---color-primary-h: 280;   /* 紫 */
---color-secondary-h: 320; /* 洋紅 */
---color-tertiary-h: 0;    /* 血紅 */
---color-quaternary-h: 260; /* 暗紫 */
+--color-primary-h: 280;   /* Purple */
+--color-secondary-h: 320; /* Magenta */
+--color-tertiary-h: 0;    /* Blood red */
+--color-quaternary-h: 260; /* Deep purple */
 ```
 
-**史詩系 (Epic)**:
+**Epic**:
 ```css
---color-primary-h: 45;    /* 金 */
---color-secondary-h: 30;  /* 銅 */
---color-tertiary-h: 0;    /* 紅 */
---color-quaternary-h: 15; /* 橘金 */
+--color-primary-h: 45;    /* Gold */
+--color-secondary-h: 30;  /* Bronze */
+--color-tertiary-h: 0;    /* Red */
+--color-quaternary-h: 15; /* Orange gold */
 ```
 
-#### 4.5 Apply Theme Settings
+#### 5.5 Apply Theme Settings
 
 Update `docs/src/styles/custom.css` with selected colors.
 
@@ -215,7 +235,7 @@ body {
 }
 ```
 
-### 5. Identify Key Terms
+### 6. Identify Key Terms
 
 Scan extracted content for:
 - Capitalized game terms (Move, Playbook, Harm)
@@ -224,27 +244,20 @@ Scan extracted content for:
 
 Present terms to user for translation confirmation.
 
-### 6. Build Glossary
+### 7. Build Glossary
 
 Create `glossary.json` with confirmed terms:
 
 ```json
 {
   "Term": {
-    "zh": "翻譯",
-    "notes": "使用情境"
+    "zh": "translation",
+    "notes": "usage context"
   }
 }
 ```
 
 Ask user about style preferences and record in `style-decisions.json`.
-
-### 7. Configure Chapters
-
-Help user set up `chapters.json`:
-1. Show table of contents from PDF
-2. Suggest chapter structure based on content
-3. Map page ranges to output files
 
 ### 8. Split Content
 
@@ -278,26 +291,31 @@ After initial split, analyze the generated `index.md` to create proper chapter s
    - Move corresponding content from index.md
    - Update index.md to contain only overview/introduction
 
-4. **Update chapters.json**
-   Add new files to config for future reference.
-
-5. **Frontmatter Template**
+4. **Frontmatter Template**
    ```yaml
    ---
-   title: 章節標題
-   description: 章節描述
+   title: Chapter Title
+   description: Chapter Description
    sidebar:
-     order: N  # 保留原始目錄順序
+     order: N  # Keep original table of contents order
    ---
    ```
 
-### 10. Verify
+### 10. Configure Chapters
+
+Finalize `chapters.json` after all splits are done:
+1. Show table of contents from PDF and actual generated files
+2. Confirm chapter structure based on final split result
+3. Map page ranges and file paths to output files
+4. Ensure order matches `sidebar.order` and actual navigation
+
+### 11. Verify
 
 - Check generated files in `docs/src/content/docs/`
 - Verify sidebar order matches original TOC
 - Preview: `cd docs && bun dev`
 
-### 11. Record Configuration
+### 12. Record Configuration
 
 Save all visual settings to `style-decisions.json`:
 
@@ -321,6 +339,33 @@ Save all visual settings to `style-decisions.json`:
   }
 }
 ```
+
+### 13. Final Cleanup and Sidebar Refresh
+
+After cropping and split operations are complete:
+
+1. Remove unnecessary example files and placeholders from `docs/src/content/docs/`.
+2. Ensure only real, current documents remain in the content tree.
+3. Reorganize sidebar configuration/order so it reflects the latest split structure.
+4. Verify sidebar links do not point to deleted or renamed files.
+5. Run a final docs preview and confirm navigation is correct.
+
+## Completion Checklist (Must Follow in Order)
+
+- [ ] Step 1: 已定位 PDF（`data/pdfs/`）並確認來源檔案
+- [ ] Step 2: 已完成內容抽取（`extract_pdf.py`）並檢查 `data/markdown/` 輸出
+- [ ] Step 3: 已完成 PDF 裁切結果檢查與必要拆分，並確認重新抽取完整
+- [ ] Step 4: 已完成圖片挑選與資產複製（hero/background/og）
+- [ ] Step 5: 已完成視覺主題設定（背景模式、遮罩、色票）
+- [ ] Step 6: 已完成術語盤點，並以繁體中文與使用者確認
+- [ ] Step 7: 已更新 `glossary.json` 與風格決策
+- [ ] Step 8: 已完成初始章節拆分（`split_chapters.py`）
+- [ ] Step 9: 已完成 `index.md` 分析與章節拆分落檔
+- [ ] Step 10: 已完成 `chapters.json` 最終配置，且順序與 sidebar 一致
+- [ ] Step 11: 已完成文件預覽驗證（目錄、連結、顯示）
+- [ ] Step 12: 已更新 `style-decisions.json` 設定紀錄
+- [ ] Step 13: 已移除不必要範例文件並重整 sidebar
+- [ ] Gate: 已確認全程與使用者互動皆為繁體中文
 
 ## Example Usage
 
