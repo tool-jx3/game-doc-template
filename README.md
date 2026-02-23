@@ -131,14 +131,55 @@ translate
 
 ### 常用指令對照
 
-| 功能 | 指令 |
-| --- | --- |
-| 建立新專案 | `new-project <pdf-path>` |
-| 初始化翻譯專案 | `init-doc` |
-| 翻譯章節或檔案 | `translate [target]` |
-| 術語一致性檢查 | `check-consistency` |
-| 術語決策與批次替換 | `term-decision` |
-| 內容完整性檢查 | `check-completeness` |
+| 功能               | 指令                     |
+| ------------------ | ------------------------ |
+| 建立新專案         | `new-project <pdf-path>` |
+| 初始化翻譯專案     | `init-doc`               |
+| 翻譯章節或檔案     | `translate [target]`     |
+| 術語一致性檢查     | `check-consistency`      |
+| 術語決策與批次替換 | `term-decision`          |
+| 內容完整性檢查     | `check-completeness`     |
+
+---
+
+## 本專案工作流程（簡版）
+
+1. 準備來源檔  
+   把規則 PDF 放到 `data/pdfs/`。
+
+2. 初始化專案（建議）  
+   執行 `init-doc`（或手動執行清理、提取、切章），建立可翻譯的初始內容。
+
+3. 提取 PDF 與章節裁切（Python）
+   1. `uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf`
+   2. `uv run python scripts/split_chapters.py --init`
+   3. 編輯 `chapters.json`（設定章節與頁碼範圍）
+   4. `uv run python scripts/split_chapters.py`  
+      產出檔案到 `docs/src/content/docs/`。
+
+4. 術語預處理
+   原則：`glossary.json` 是唯一術語來源，先定義再翻譯，避免同詞多譯。  
+   建議指令：
+   1. `uv run python scripts/term_generate.py --min-frequency 2`（找高頻候選詞）
+   2. `uv run python scripts/term_edit.py --term "<TERM>" --cal`（做全站證據計算）
+   3. `uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term`（核准術語）
+
+5. 執行翻譯（套用術語表）  
+   用 `translate` 依章節或檔案翻譯；翻譯時以 `glossary.json` 優先，並保留 Markdown 結構。  
+   原理：翻譯不是逐句自由發揮，而是「內容翻譯 + 術語套版」。
+
+6. 術語校驗與完整性檢查  
+   原則：翻譯後再做一次全站術語稽核，收斂不一致。  
+   建議指令：
+   1. `uv run python scripts/validate_glossary.py`（檢查術語表格式）
+   2. `uv run python scripts/term_read.py`（檢查缺漏詞、禁用詞、未知高頻詞）
+   3. `check-completeness`（檢查內容缺頁與規則缺漏）
+
+7. 預覽與調整樣式  
+   在 `docs/` 下執行 `bun dev`，檢查頁面、目錄、連結、圖片與主題樣式。
+
+8. 建置與部署  
+   `bun run build` 後部署到 Vercel（或其他靜態站台服務）。
 
 ---
 
