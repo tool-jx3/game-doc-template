@@ -254,6 +254,7 @@ Invoke `terminology-management` skill and run candidate generation from extracte
 - Capitalized game terms (Move, Playbook, Harm)
 - Quoted terms
 - Repeated specialized vocabulary (frequency >= 2)
+- Proper nouns appearing >= 2 times (must be treated as managed terms when `proper_nouns.mode != keep_original`)
 
 Use script flow:
 
@@ -307,6 +308,7 @@ Rules:
 - `glossary.json` is the only source of truth.
 - For unmanaged terms, `term_edit.py` must run with `--cal` before editing.
 - Terms marked as managed skip full-site search in later `--cal` runs.
+- If `proper_nouns.mode != keep_original`, proper nouns with frequency >= 2 must be added as managed glossary terms.
 
 Ask user about style preferences and record in `style-decisions.json`.
 

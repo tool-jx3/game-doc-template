@@ -44,6 +44,7 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 
 - Must follow term mappings in `glossary.json`.
 - New terms must be added to the glossary before use.
+- If `proper_nouns.mode != keep_original`, proper nouns appearing 2 or more times in corpus must be treated as managed terms in glossary workflow.
 - Preserve source meaning and avoid over-localization.
 - Proper noun policy (person/place/org/brand/product names) is user-configurable during `/init-doc`; do not hardcode a single rule.
 - Terminology workflow must reuse `.claude/skills/terminology-management/SKILL.md`.
@@ -219,6 +220,7 @@ sidebar:
 #### Proper Nouns
 
 - Check `glossary.json` first
+- If `proper_nouns.mode != keep_original` and a proper noun appears 2+ times, it must be managed as a glossary term
 - Game titles: use official Chinese name if exists
 - Character/proper-name handling: follow `style-decisions.json` policy selected by user during `/init-doc`
 - Record decisions in `style-decisions.json`

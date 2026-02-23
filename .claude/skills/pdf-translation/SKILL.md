@@ -61,6 +61,7 @@ For each markdown file in `docs/src/content/docs/`:
 - Maintain original meaning, avoid over-localization
 - Game mechanics terms: use established translations
 - Proper nouns: follow `style-decisions.json` -> `proper_nouns.mode` (set during `/init-doc`)
+- If `proper_nouns.mode != keep_original`, proper nouns appearing 2+ times must be managed in `glossary.json` before final translation pass
 - Format: preserve markdown syntax exactly
 
 ## Phase 4: Quality Check

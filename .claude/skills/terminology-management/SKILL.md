@@ -29,6 +29,7 @@ When this skill is invoked, always run this loop:
 1. **Generate candidates**: run `term_generate.py` on target corpus.
 2. **CAL first for unmanaged terms**: run `term_edit.py --cal --term "<term>"` before editing.
 3. **Classify term candidates**: decide whether each candidate is a real game term or normal prose.
+   - If `style-decisions.json -> proper_nouns.mode != keep_original`, any proper noun that appears `>=2` times must be classified as a managed term.
 4. **Edit termbase**: add/update/disable terms with reasons via `term_edit.py`.
 5. **Read and validate**: run `term_read.py` to report missing/forbidden/unknown terms.
 
@@ -126,6 +127,6 @@ Location: `style-decisions.json` (project root)
 | Category | Handling |
 |----------|----------|
 | Core mechanics | Must be consistent, add to glossary first |
-| Proper nouns | Check official translations, record decision |
+| Proper nouns | If `proper_nouns.mode != keep_original` and frequency `>=2`, must be added to glossary and managed consistently; check official translations and record decision |
 | Flavor text | More flexible, prioritize readability |
 | UI/System terms | Match Starlight conventions |

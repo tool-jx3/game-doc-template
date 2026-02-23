@@ -110,9 +110,10 @@ For each target file:
 When encountering unknown terms:
 
 1. Pause and classify if it is a real game term.
-2. If yes, run `term_edit.py --cal` first, then update glossary via `term_edit.py`.
-3. Re-run terminology read/check (prefer cached index).
-4. Continue with updated termbase.
+2. If `proper_nouns.mode != keep_original` and it is a proper noun appearing 2+ times in corpus/target scope, it must be treated as a managed term.
+3. If yes, run `term_edit.py --cal` first, then update glossary via `term_edit.py`.
+4. Re-run terminology read/check (prefer cached index).
+5. Continue with updated termbase.
 
 Command pattern:
 
