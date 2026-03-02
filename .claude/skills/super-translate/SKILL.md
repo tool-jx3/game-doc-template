@@ -54,7 +54,7 @@ Persist mode before dispatch.
 
 ```bash
 mkdir -p .claude/skills/super-translate/.state/drafts
-bash .claude/skills/super-translate/scripts/run_state.sh start \
+uv run python .claude/skills/super-translate/scripts/run_state.py start \
   --targets <file1> <file2> ...
 ```
 
@@ -68,7 +68,7 @@ For each target file:
 3. mark runtime `running`
 
 ```bash
-bash .claude/skills/super-translate/scripts/run_state.sh update \
+uv run python .claude/skills/super-translate/scripts/run_state.py update \
   --file <target_file> \
   --status running
 ```
@@ -121,7 +121,7 @@ After each batch:
 ### Step 9: Final Verification
 
 ```bash
-bash .claude/skills/super-translate/scripts/run_state.sh end
+uv run python .claude/skills/super-translate/scripts/run_state.py end
 uv run python scripts/validate_glossary.py
 uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
 ```

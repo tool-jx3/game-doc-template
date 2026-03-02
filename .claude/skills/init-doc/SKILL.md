@@ -126,21 +126,24 @@ uv run python scripts/split_chapters.py
 
 ### Step 9: Create Translation Progress Tracker
 
-Create `data/translation-progress.json` with:
-- chapter ids from output file names
-- source page ranges
+Create `data/translation-progress.json` from `chapters.json`:
+
+```bash
+uv run python scripts/init_create_progress.py --force
+```
+
+Tracker contract:
+- chapter ids derived from output file paths
+- source page ranges mapped from chapter config
 - initial status `not_started`
 - `_meta` fields (`updated`, `total_chapters`, `completed`)
 
 ### Step 10: Final Gate and Handoff (Fail-Closed)
 
-Run all gates:
+Run one-shot handoff gate:
 
 ```bash
-test -f glossary.json && test -f style-decisions.json && test -f chapters.json && test -f data/translation-progress.json
-uv run python scripts/validate_glossary.py
-uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
-cd docs && bun run build
+uv run python scripts/init_handoff_gate.py
 ```
 
 If any gate fails, stop and fix before completion.
