@@ -1,151 +1,109 @@
 ---
 name: new-project
-description: Create a new project from template and set up a GitHub repo (public or private)
+description: Use when creating a new translation project from template and preparing repository metadata.
 user-invocable: true
 disable-model-invocation: true
 ---
 
 # Create New Project from Template
 
-Create a new game documentation project from the `game-doc-template` repository and set up a GitHub repository (public or private).
+## Overview
 
-## Prerequisites
+Create a new game documentation project from template, configure repository metadata, and prepare source PDF for initialization.
 
-- `gh` CLI is installed and authenticated.
-- `git` is configured.
-- Source PDF is available.
+**Core principle:** Ask once, create deterministic project state, verify immediately, then hand off.
 
-## Process
+## The Process
 
-### 1. Gather Information
+### Step 1: Validate Preconditions
 
-Use AskUserQuestion once to collect the following:
+Confirm:
+- `gh` is installed and authenticated
+- `git` is configured
+- source PDF path exists
 
-**Question 1: Project Path**
-- header: "Project Path"
-- question: "Where should the new project be created?"
-- options:
-  - `../` (default, sibling to template)
-  - Custom path
+If any check fails, stop and report exact remediation.
 
-**Question 2: Game Title (zh-TW)**
-- header: "Game Title"
-- question: "What is the Traditional Chinese title for this game?"
-- Extract the original title from the PDF filename as reference.
+### Step 2: Ask User Inputs in Traditional Chinese
 
-**Question 3: Project Name** (if `$ARGUMENTS` does not include it)
-- header: "Project Name"
-- question: "What should the project folder and repo name be?"
-- Suggest a lowercase hyphenated slug from the PDF filename.
+Collect via AskUserQuestion:
 
-**Question 4: Repository Visibility**
-- header: "Repo Type"
-- question: "Should the GitHub repo be public or private?"
-- options:
-  - Private repo (default)
-  - Public repo
+1. Project path
+- header: `專案路徑`
+- question: `請問新專案要建立在哪個路徑？`
 
-Example:
-```
-PDF: "Blades in the Dark.pdf"
-Original title: Blades in the Dark
-zh-TW title: 暗夜冷鋒
-Suggested project name: blades-in-the-dark
-```
+2. Game zh-TW title
+- header: `遊戲名稱`
+- question: `請問這款遊戲的繁體中文名稱是什麼？`
 
-### 2. Determine Paths and Variables
+3. Project slug (if missing from arguments)
+- header: `專案代號`
+- question: `請問資料夾與 GitHub repo 要使用哪個名稱？`
+
+4. Repository visibility
+- header: `儲存庫類型`
+- question: `GitHub 儲存庫要設為公開還是私有？`
+
+### Step 3: Create TodoWrite
+
+Create items for:
+- variable resolution
+- repo creation
+- PDF copy
+- config updates
+- verification and report
+
+### Step 4: Resolve Variables
 
 ```bash
-# Template repo (current project)
 TEMPLATE_REPO="weihung/game-doc-template"
-
-# Target directory (user specified, default: ../)
-TARGET_DIR="<user_specified_path>/<project_name>"
-
-# PDF path (from arguments)
-PDF_PATH="$ARGUMENTS[0]"
-
-# Game titles
-GAME_TITLE_EN="<extracted_from_pdf>"
-GAME_TITLE_ZH="<user_specified>"
-
-# Repo visibility
+TARGET_DIR="<user_path>/<project_name>"
+PDF_PATH="<pdf_path>"
+GAME_TITLE_EN="<derived_from_pdf_filename>"
+GAME_TITLE_ZH="<user_input>"
 REPO_VISIBILITY="<private_or_public>"
-
-# GitHub URL
 REPO_URL="https://github.com/<username>/<project_name>"
 ```
 
-### 3. Clone Template
+### Step 5: Create Repository
+
+Preferred path:
 
 ```bash
-# Navigate to parent directory
-cd <user_specified_path>
-
-# Create from template and clone
+cd <user_path>
 gh repo create <project_name> --template $TEMPLATE_REPO --$REPO_VISIBILITY --clone
-
-# Local-copy fallback:
-# cp -r <template_path> <TARGET_DIR>
-# cd <TARGET_DIR>
-# rm -rf .git
-# git init
 ```
 
-### 4. Create GitHub Repository (Local-Copy Mode Only)
+Fallback local-copy path:
 
 ```bash
+cp -r <template_path> <TARGET_DIR>
 cd <TARGET_DIR>
-
-# Create repo using selected visibility
+rm -rf .git
+git init
 gh repo create <project_name> --$REPO_VISIBILITY --source=. --remote=origin
-
-# Push initial commit
 git add .
 git commit -m "Initial commit from game-doc-template"
 git push -u origin main
 ```
 
-### 5. Copy PDF
+### Step 6: Copy PDF and Apply Configuration
+
+Copy PDF:
 
 ```bash
 mkdir -p data/pdfs
 cp "<pdf_path>" data/pdfs/
 ```
 
-### 6. Update Project Configuration
+Update:
+- `docs/astro.config.mjs` title and (if public) GitHub social link
+- `style-decisions.json.repository` metadata
+- `CLAUDE.md` project description
 
-Edit `docs/astro.config.mjs`:
-- Update `SITE_CONFIG.title` with `GAME_TITLE_ZH`.
-- If `REPO_VISIBILITY=public`, add Starlight GitHub social link:
+### Step 7: Verify and Report
 
-```js
-social: [
-  { icon: 'github', label: 'GitHub', href: 'https://github.com/<username>/<project_name>' },
-],
-```
-
-Edit `style-decisions.json`:
-- Store repository metadata as the source of truth:
-
-```json
-{
-  "repository": {
-    "visibility": "public",
-    "url": "https://github.com/<username>/<project_name>",
-    "show_on_homepage": true
-  }
-}
-```
-
-Homepage behavior:
-- If `REPO_VISIBILITY=public` and `show_on_homepage=true`, include repo link in `docs/src/content/docs/index.md`.
-- If `REPO_VISIBILITY=private`, keep metadata but do not expose repo links in UI.
-
-Edit `CLAUDE.md`:
-- Update project description with both original and zh-TW game titles.
-
-### 7. Verify Setup
+Verify:
 
 ```bash
 ls -la
@@ -154,32 +112,54 @@ ls -la docs/
 git remote -v
 ```
 
-### 8. Next Steps
+Report in Traditional Chinese:
 
-Inform user:
-```
-✓ Project created: <project_name>
-✓ Game title: <GAME_TITLE_EN>（<GAME_TITLE_ZH>）
-✓ Project path: <TARGET_DIR>
-✓ Repo type: <REPO_VISIBILITY>
-✓ GitHub repo: https://github.com/<username>/<project_name>
-✓ PDF copied to: data/pdfs/<filename>
+```text
+✓ 專案已建立：<project_name>
+✓ 遊戲名稱：<GAME_TITLE_EN>（<GAME_TITLE_ZH>）
+✓ 專案路徑：<TARGET_DIR>
+✓ Repo 類型：<REPO_VISIBILITY>
+✓ GitHub repo：https://github.com/<username>/<project_name>
+✓ PDF 已複製到：data/pdfs/<filename>
 
-Next:
+下一步：
 1. cd <TARGET_DIR>
-2. Run /init-doc
+2. 執行 /init-doc
 ```
+
+## Progress Sync Contract (Required)
+
+1. Update TodoWrite after each major step.
+2. Mark blockers immediately with reason.
+3. Do not claim completion with open critical items.
+
+## When to Stop and Ask for Help
+
+Stop when:
+- repo name is unavailable and no approved fallback exists
+- auth or permission errors block creation
+- source PDF path remains invalid
+
+## When to Revisit Earlier Steps
+
+Return to input/variable steps when:
+- user changes path/name/visibility
+- source PDF changes
+
+## Red Flags
+
+Never:
+- create repo with missing required user decisions
+- expose private repo URL in public homepage links
+- skip verification before reporting success
+
+## Next Step
+
+Continue with `/init-doc`.
 
 ## Example Usage
 
-```
+```text
 /new-project ~/Downloads/Blades-in-the-Dark.pdf
 /new-project ~/Downloads/game.pdf my-game-docs
 ```
-
-## Error Handling
-
-- If `gh` is missing: provide install instructions.
-- If not authenticated: run `gh auth login`.
-- If repo name is taken: suggest alternatives.
-- If PDF is missing: ask for correct path.

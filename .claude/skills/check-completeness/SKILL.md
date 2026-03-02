@@ -1,68 +1,100 @@
 ---
 name: check-completeness
-description: 缺漏校對 - 檢查規則完整性
+description: Use when validating translated documentation for missing rule content.
 user-invocable: true
 disable-model-invocation: true
 ---
 
 # Check Completeness
 
-Use `pdf-translation` skill for reference.
+## Overview
 
-## Process
+Validate that translated docs preserve source rule coverage, structure, and navigability.
 
-### 1. Load Source
+**Core principle:** Compare against source with evidence, then patch gaps and re-check.
 
-Read original `data/markdown/<name>_pages.md` with page markers.
+## The Process
 
-### 2. Compare Structure
+### Step 1: Resolve Scope and Inputs
 
-For scope `$ARGUMENTS` or all sections:
+1. Resolve target from `$ARGUMENTS` or all sections.
+2. Load source with page markers: `data/markdown/<name>_pages.md`.
+3. Load outputs under `docs/src/content/docs/` and `chapters.json`.
+4. Create TodoWrite items for comparison, repair, and verification.
 
-| Check | Method |
-|-------|--------|
-| Page coverage | Verify all pages in chapters.json are extracted |
-| Section headers | Compare H2/H3 count with original |
-| Tables | Count tables in source vs output |
-| Lists | Verify bullet/numbered lists preserved |
+### Step 2: Perform Structural Comparison
 
-### 3. Content Verification
+Check:
+- page coverage mapped from `chapters.json`
+- heading hierarchy parity (H2/H3)
+- table count parity
+- list structure parity
 
-- **Rules coverage**: List all game rules mentioned, verify each is documented
-- **Cross-references**: Check internal links resolve
-- **Examples**: Verify examples are translated completely
+### Step 3: Perform Content Integrity Checks
 
-### 4. Generate Report
+Check:
+- rule coverage
+- examples retained per translation mode
+- internal link and anchor integrity
+
+### Step 4: Report Gaps
+
+Reference format:
 
 ```markdown
 ## Completeness Report
 
 ### Missing Content
 - Pages 45-47 not in any chapter
-- Section "Advanced Combat" header missing
 
 ### Incomplete Sections
 - rules/combat.md: 2 tables in source, 1 in output
-- characters/index.md: example block truncated
 
 ### Broken References
-- [無效連結](/path/) in file.md:15
+- [Invalid Link](/path/) in file.md:15
 ```
 
-### 5. Fix Issues
+### Step 5: Repair and Re-verify
 
-For each issue:
-1. Show original content from source
-2. Ask user how to handle
-3. Add missing content or update chapters.json
+1. Restore missing content from source.
+2. Fix broken structure/links.
+3. Re-run completeness checks.
+4. Repeat until critical gaps are cleared.
 
-### 6. Re-verify
+## Progress Sync Contract (Required)
 
-Run check again to confirm completeness.
+1. Update TodoWrite after each section audit.
+2. Mark each repaired gap with path reference.
+3. Mark verification done only after final clean pass.
+
+## When to Stop and Ask for Help
+
+Stop when:
+- source structure is ambiguous and split decision affects meaning
+- missing content cannot be mapped reliably to a target file
+- repairs would conflict with user-selected summary mode expectations
+
+## When to Revisit Earlier Steps
+
+Return to Step 1 when:
+- chapter mapping changes
+- source extraction is regenerated
+- user changes completeness expectations
+
+## Red Flags
+
+Never:
+- ignore page coverage mismatches
+- silently drop examples required by current mode
+- finalize with unresolved broken links
+
+## Next Step
+
+After completeness is clean, run `/check-consistency` and proceed to `/super-translate` if needed.
 
 ## Example Usage
 
-```
+```text
 /check-completeness
 /check-completeness rules
 /check-completeness characters

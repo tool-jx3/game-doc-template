@@ -1,6 +1,6 @@
 ---
 name: super-translate
-description: Use when high-quality translation is needed for docs with iterative multi-agent review before final output.
+description: Use when high-quality translation is needed with multi-agent review loops and strict progress tracking.
 user-invocable: true
 disable-model-invocation: true
 ---
@@ -9,154 +9,150 @@ disable-model-invocation: true
 
 ## Overview
 
-Translate with a fixed loop:
-`translator -> source-reviewer -> quality-reviewer -> refiner`
+Run iterative translation with reviewer loops and strict state/progress controls.
+Pipeline: `translator -> source-reviewer -> quality-reviewer -> refiner`.
 
-Core principle:
-- Source fidelity first
-- Terminology consistency always
-- Quality review only after source review passes
+**Core principle:** Source-fidelity gate first, quality gate second, no overwrite unless both pass.
 
 ## The Process
 
-### Step 1: Check Translation Progress
+### Step 1: Resolve Scope and Preconditions
 
-Read `data/translation-progress.json` to understand current state:
-- Show which chapters are `not_started`, `in_progress`, `completed`, `reviewed`.
-- If no arguments given, ask user in Traditional Chinese which chapters to translate next, using the progress file as reference.
-- If `data/translation-progress.json` does not exist, remind user to run `/init-doc` first.
+1. Load targets from `$ARGUMENTS` or ask user in Traditional Chinese.
+2. Verify required files:
+- `data/translation-progress.json`
+- `glossary.json`
+- `style-decisions.json`
+3. If missing, stop and ask user to initialize first.
 
-Status legend: `·` not_started  `▶` in_progress  `✓` completed  `★` reviewed
+### Step 2: Create TodoWrite Before Dispatch
 
-### Step 2: Terminology Preflight (Required)
+Create TodoWrite with:
+- one parent item per target file
+- sub-steps: draft, source review, quality review, refine loop, writeback
+- batch checkpoint and final verification items
 
-Run before any translation:
+### Step 3: Terminology Preflight (Fail-Closed)
 
 ```bash
-uv run python scripts/term_read.py
+uv run python scripts/validate_glossary.py
+uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
 ```
 
-Resolve critical terminology issues first.
+If preflight fails, stop and fix terminology first.
 
-### Step 3: Resolve Mode and Targets
+### Step 4: Resolve Translation Mode
 
-1. Read `style-decisions.json.translation_mode.mode`.
-2. If missing, ask user in Traditional Chinese:
-   - **完整翻譯**：完整翻譯所有內容，保留原始結構與細節
-   - **摘要翻譯**：以精簡方式翻譯重點規則，省略範例與冗長說明
-3. Resolve scope: single file / section / all (cross-reference with Step 1 progress).
+Read `style-decisions.json.translation_mode.mode`.
+If missing, ask user in Traditional Chinese:
+- **完整翻譯**：完整翻譯所有內容，保留原始結構與細節
+- **摘要翻譯**：以精簡方式翻譯重點規則，省略範例與冗長說明
 
-### Step 4: Initialize State
+Persist mode before dispatch.
+
+### Step 5: Initialize Runtime State
 
 ```bash
+mkdir -p .claude/skills/super-translate/.state/drafts
 bash .claude/skills/super-translate/scripts/run_state.sh start \
   --targets <file1> <file2> ...
 ```
 
-### Step 5: Execute Per File (Max 3 Iterations)
+If initialization fails, abort run.
 
-For each file:
+### Step 6: Execute Per Batch (Default First 3 Files)
 
-1. Dispatch `translator`.
-2. Dispatch `source-reviewer` on source + draft.
-3. If source review fails, dispatch `refiner`, then re-run source review.
-4. After source review passes, dispatch `quality-reviewer`.
-5. If quality review fails, dispatch `refiner`, then re-run quality review.
-6. Stop when:
-   - all critical issues resolved and quality gate passes, or
-   - 3 iterations reached.
-
-If 3 iterations reached and critical issues remain, ask user in Traditional Chinese:
-- **接受目前狀態，直接輸出（可稍後執行 /check-consistency 修正）**
-- **停止此檔案，改為手動修正後再繼續**
-
-### Step 6: Unknown Term Handling
-
-When unknown terms appear:
-
-```bash
-uv run python scripts/term_edit.py --term "<TERM>" --cal
-uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term
-uv run python scripts/term_read.py
-```
-
-Then re-run the affected file with the updated glossary.
-
-### Step 7: Update State and Finalize
-
-After each file:
-
-1. Update session state:
+For each target file:
+1. mark TodoWrite item `in_progress`
+2. set progress status `in_progress` and update notes
+3. mark runtime `running`
 
 ```bash
 bash .claude/skills/super-translate/scripts/run_state.sh update \
   --file <target_file> \
-  --status pass \
-  --critical-fixed <N> \
-  --minor-fixed <M> \
-  --remaining-critical <R>
+  --status running
 ```
 
-Use `--status blocked` if unresolved critical issues remain.
+4. produce draft only (do not overwrite source)
+5. run source reviewer
+6. if fail -> refine -> re-run source reviewer
+7. after source pass, run quality reviewer
+8. if fail -> refine -> re-run quality reviewer
+9. cap at 3 iterations
 
-2. Update translation progress — edit `data/translation-progress.json` and set the chapter's `status`:
-   - `completed` if all critical issues resolved and quality gate passed
-   - `in_progress` if blocked (unresolved critical issues remain)
+If 3 iterations still have critical issues, ask user in Traditional Chinese:
+- **保留目前草稿，不覆蓋原始檔，稍後手動修正後再續跑**
+- **停止此檔案，先處理術語或規則歧義再繼續**
 
-After all files:
+Unknown term handling:
+
+```bash
+uv run python scripts/term_edit.py --term "<TERM>" --cal
+uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term
+uv run python scripts/validate_glossary.py
+uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
+```
+
+Then rerun the file loop.
+
+### Step 7: Controlled Writeback and State Update
+
+Only if both reviewer gates pass:
+- atomically replace source with draft
+- mark runtime `pass`
+- set chapter `completed`
+- recalculate `_meta.completed`
+- close TodoWrite file item
+
+If blocked/failed:
+- keep source unchanged
+- mark runtime `blocked` or `failed`
+- keep chapter `in_progress`
+- mark TodoWrite as blocked
+
+### Step 8: Batch Checkpoint Report
+
+After each batch:
+- report completed/blocked/failed files
+- report iteration counts and remaining criticals
+- confirm TodoWrite + progress tracker sync
+- ask whether to continue next batch
+
+### Step 9: Final Verification
 
 ```bash
 bash .claude/skills/super-translate/scripts/run_state.sh end
+uv run python scripts/validate_glossary.py
+uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
 ```
 
-Run `/check-consistency` after completion.
+Invoke `check-consistency` skill to validate terminology consistency across all translated files.
+If any violations are found, resolve them before marking the run complete.
 
-## Agent Dispatch Contract
+## Progress Sync Contract (Required)
 
-Use Task tool and set explicit `subagent_type` each time.
+1. Sync TodoWrite and `translation-progress.json` at file start, every review loop, and file close.
+2. Never defer sync until end-of-run.
 
-### translator
+## When to Stop and Ask for Help
 
-```text
-subagent_type: translator
-description: Translate <TARGET_FILE>
-```
+Stop when:
+- repeated critical findings remain after iteration cap
+- runtime state script fails unexpectedly
+- subagent output is malformed and not safely recoverable
 
-### source-reviewer
+## When to Revisit Earlier Steps
 
-```text
-subagent_type: source-reviewer
-description: Source review <TARGET_FILE>
-```
-
-### quality-reviewer
-
-```text
-subagent_type: quality-reviewer
-description: Quality review <TARGET_FILE>
-```
-
-### refiner
-
-```text
-subagent_type: refiner
-description: Refine <TARGET_FILE> using reviewer findings
-```
-
-## Progress Reporting
-
-After each file, report in Traditional Chinese:
-
-```text
-✓ super-translated: <path>
-  iterations: N  |  critical fixed: X  |  minor fixed: Y
-```
+Return to scope/mode steps when:
+- user changes scope
+- translation mode changes
+- glossary policy changes significantly
 
 ## Red Flags
 
 Never:
-- skip `source-reviewer` or `quality-reviewer`
-- run `quality-reviewer` before `source-reviewer` passes
-- overwrite source file with unresolved critical issues
-- bypass glossary/style decisions
-- use script-based bulk replacement to generate translated prose
+- skip TodoWrite creation
+- run quality review before source review passes
+- overwrite source with unresolved critical findings
+- use script-generated prose translation
+

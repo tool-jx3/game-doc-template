@@ -1,81 +1,95 @@
 ---
 name: term-decision
-description: 用語權衡 - 術語選擇與全文替換
+description: Use when selecting terminology and applying consistent replacements across documentation.
 user-invocable: true
 disable-model-invocation: true
 ---
 
 # Terminology Decision
 
-Use `terminology-management` skill.
+## Overview
 
-## Process
+Decide contested terms, record rationale, apply replacements, and verify consistency.
 
-### 1. Identify Term
+**Core principle:** No global replacement without explicit term decision and verification.
 
-If `$ARGUMENTS` provided, focus on that term.
-Otherwise, list terms needing decisions from:
-- Inconsistent usage found in `term_read.py` output
-- Missing glossary entries from `term_generate.py` output
-- User-flagged terms
+## The Process
 
-### 2. Present Options
+### Step 1: Resolve Decision Scope
 
-For each term, show:
-- Original English term
-- Current usage(s) in documents
-- Suggested translations with rationale
-- How other games translate similar terms
+1. If `$ARGUMENTS` exists, focus on that term.
+2. Otherwise collect candidates from:
+- `term_read.py` inconsistency output
+- `term_generate.py` missing candidates
+- user-flagged terminology
+3. Create TodoWrite items per term.
 
-### 3. User Decision
+### Step 2: Prepare Decision Brief
 
-Ask user to choose:
-1. Translation to use
-2. Any context-specific variants
-3. Reason for choice
+For each term, present:
+- source term
+- current variants and usage locations
+- 2-3 candidate translations with short rationale
+- related conventions from `style-decisions.json`
 
-### 4. Record Decision
+### Step 3: Ask User Decision (Traditional Chinese)
 
-Update `style-decisions.json`:
+Collect:
+1. chosen translation
+2. allowed context-specific variants (if any)
+3. rationale note
 
-```json
-{
-  "term_category": {
-    "decision": "選擇的翻譯",
-    "alternatives": ["其他選項"],
-    "reason": "選擇原因"
-  }
-}
-```
+### Step 4: Persist Decision
 
-Update `glossary.json` with final term.
-For unmanaged terms, run `--cal` first:
+Record in `style-decisions.json` and update `glossary.json`:
 
 ```bash
 uv run python scripts/term_edit.py --term "<TERM>" --cal
 uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term --notes "<REASON>"
 ```
 
-### 5. Batch Replace
+### Step 5: Apply and Verify
 
-Find all occurrences across `docs/src/content/docs/`:
-- Show preview of changes
-- Confirm with user
-- Apply replacements
-
-After replacement, run:
+1. Preview replacement impact across docs.
+2. Apply approved replacements.
+3. Verify:
 
 ```bash
-uv run python scripts/term_read.py
+uv run python scripts/term_read.py --fail-on-forbidden
 ```
 
-### 6. Verify
+## Progress Sync Contract (Required)
 
-Show summary of changes made.
+1. One TodoWrite item per term decision.
+2. Mark replacement item complete only after verification passes.
+
+## When to Stop and Ask for Help
+
+Stop when:
+- term choice changes mechanics interpretation
+- user preference conflicts with existing glossary policy
+- replacement scope is ambiguous
+
+## When to Revisit Earlier Steps
+
+Return to Step 2 when:
+- new conflicting evidence appears
+- user changes proper noun policy
+
+## Red Flags
+
+Never:
+- apply unapproved term variants globally
+- skip `--cal` for unmanaged terms
+- skip post-replacement verification
+
+## Next Step
+
+After term decisions are stable, continue with `/translate` or `/super-translate`.
 
 ## Example Usage
 
-```
+```text
 /term-decision
 /term-decision Move
 /term-decision "Basic Move"

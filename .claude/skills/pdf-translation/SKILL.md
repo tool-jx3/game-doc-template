@@ -1,41 +1,57 @@
 ---
 name: pdf-translation
-description: PDF 遊戲規則轉換與翻譯流程。Use when processing PDF files, extracting content, splitting chapters, or translating game documentation.
+description: Use when processing PDF rulebooks, extracting content, splitting chapters, or preparing translation-ready markdown.
+user-invocable: true
+disable-model-invocation: true
 ---
 
 # PDF Translation Workflow
 
-## Phase 1: Extract PDF
+## Overview
+
+Convert a source PDF into structured markdown chapters ready for translation and review.
+
+**Core principle:** Extract cleanly, split deterministically, and verify artifacts before translation starts.
+
+## The Process
+
+### Step 1: Extract PDF
+
+Run:
 
 ```bash
 uv run python scripts/extract_pdf.py data/pdfs/<filename>.pdf
 ```
 
-**Outputs** (in `data/markdown/`):
-| File | Purpose |
-|------|---------|
-| `<name>.md` | Clean text (markitdown) |
-| `<name>_pages.md` | With `<!-- PAGE N -->` markers |
-| `images/<name>/` | Extracted images |
+Expected outputs in `data/markdown/`:
+- `<name>.md`
+- `<name>_pages.md`
+- `images/<name>/`
 
-## Phase 2: Configure Chapters
+### Step 2: Configure Chapter Mapping
 
-1. Generate template: `uv run python scripts/split_chapters.py --init`
-2. Edit `chapters.json`:
+1. Initialize template:
+
+```bash
+uv run python scripts/split_chapters.py --init
+```
+
+2. Edit `chapters.json` with source file, section order, file titles, and page ranges.
+
+Reference snippet:
 
 ```json
 {
   "source": "data/markdown/<name>_pages.md",
   "output_dir": "docs/src/content/docs",
-  "clean_patterns": ["\\(Order #\\d+\\)"],
   "chapters": {
     "section-slug": {
-      "title": "章節標題",
+      "title": "Chapter Title",
       "order": 1,
       "files": {
         "filename": {
-          "title": "頁面標題",
-          "description": "SEO 描述",
+          "title": "Page Title",
+          "description": "SEO Description",
           "pages": [1, 10],
           "order": 0
         }
@@ -45,39 +61,57 @@ uv run python scripts/extract_pdf.py data/pdfs/<filename>.pdf
 }
 ```
 
-3. Split: `uv run python scripts/split_chapters.py`
+### Step 3: Split to Docs Structure
 
-## Phase 3: Translation
+Run:
 
-For each markdown file in `docs/src/content/docs/`:
+```bash
+uv run python scripts/split_chapters.py
+```
 
-1. **Identify terms** - Extract English game terms
-2. **Check glossary** - Lookup in `glossary.json`
-3. **Translate** - Apply consistent terminology
-4. **Preserve structure** - Keep frontmatter, headings, lists intact
+### Step 4: Validate Output Quality
 
-### Translation Rules
+Validate:
+- heading continuity
+- page coverage completeness
+- image path integrity
+- frontmatter correctness
 
-- Maintain original meaning, avoid over-localization
-- Game mechanics terms: use established translations
-- Proper nouns: follow `style-decisions.json` -> `proper_nouns.mode` (set during `/init-doc`)
-- If `proper_nouns.mode != keep_original`, proper nouns appearing 2+ times must be managed in `glossary.json` before final translation pass
-- Format: preserve markdown syntax exactly
+Preview if needed:
 
-## Phase 4: Quality Check
+```bash
+cd docs && bun dev
+```
 
-| Check | Action |
-|-------|--------|
-| Terminology | Verify against `glossary.json` |
-| Completeness | Compare page count with original |
-| Format | Validate frontmatter, links |
-| Preview | `cd docs && bun dev` |
+### Step 5: Handoff
 
-## Troubleshooting
+Hand off generated docs to `/init-doc` or `/translate` pipeline.
 
-| Issue | Solution |
-|-------|----------|
-| Garbled text | PDF may have non-standard encoding; try different extraction |
-| Missing pages | Check `_pages.md` for page markers |
-| Broken images | Verify image paths in `images/` folder |
-| Format issues | Use `clean_patterns` to remove artifacts |
+## Progress Sync Contract (Required)
+
+1. Track extraction, mapping, and split steps in TodoWrite.
+2. Mark split complete only after output validation.
+
+## When to Stop and Ask for Help
+
+Stop when:
+- extraction output is unreadable/garbled
+- chapter boundaries are ambiguous
+- split output corrupts structure repeatedly
+
+## When to Revisit Earlier Steps
+
+Return to Step 2 when:
+- chapter strategy changes
+- extracted markdown is regenerated
+
+## Red Flags
+
+Never:
+- split without validating page markers
+- proceed with broken chapter order
+- skip output validation before handoff
+
+## Next Step
+
+Continue with `/init-doc` for decisions and tracking setup.
