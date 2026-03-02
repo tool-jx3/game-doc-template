@@ -60,15 +60,104 @@ After PDF cropping is completed, review the cropped result before continuing:
 3. Save split PDF parts with clear names (for example `part-01-intro.pdf`, `part-02-core-rules.pdf`).
 4. Re-run extraction for each split part if needed, and ensure resulting markdown files are complete.
 
-### 4. Extract and Select Images
+### 4. Review Content and Decide Document Formatting
 
-#### 4.1 Extract Images from PDF
+After extraction, briefly skim the extracted markdown to understand the book's structure, then confirm formatting standards with the user.
+
+#### 4.1 Quick Content Review
+
+Read through the extracted markdown to identify:
+- Content types present (rules, examples, tips, warnings, tables, random encounter tables, character options, etc.)
+- Structural patterns (heavy list usage, many tables, sidebar notes, designer commentary, etc.)
+- Special content that could benefit from Starlight components
+
+Summarize findings to user:
+
+```
+書本內容概覽：
+- 主要內容類型：[規則說明、範例場景、角色選項...]
+- 特殊結構：[大量表格、骰表、設計者備註...]
+- 建議可使用的格式化元件：[...]
+```
+
+#### 4.2 Confirm Formatting Standards
+
+Use AskUserQuestion to present available Starlight/Markdown features and let user decide which to use:
+
+**Starlight Asides（提示框）**:
+- `:::note[標題]` — 補充說明
+- `:::tip[標題]` — 遊戲技巧與建議
+- `:::caution[標題]` — 注意事項
+- `:::danger[標題]` — 嚴重警告
+
+**Card Grid（卡片網格）**:
+- 適合呈現角色職業、物品列表等並列內容
+- 需 import `<CardGrid>` 和 `<Card>`
+
+**Tabs（分頁籤）**:
+- 適合替代規則、不同人數玩法等切換式內容
+- 需 import `<Tabs>` 和 `<TabItem>`
+
+**Tables（表格）**:
+- 結構化數據、屬性表、裝備列表
+
+**Dice Tables（骰表）**:
+- 隨機遭遇表、戰利品表等
+
+Ask user to confirm:
+1. 啟用哪些元件
+2. 各元件對應哪些內容類型（如：設計者備註 → `:::note`）
+3. 其他格式化偏好或自訂指引
+
+#### 4.3 Save Formatting Decisions
+
+Record confirmed standards in `style-decisions.json` under `document_format`:
+
+```json
+{
+  "document_format": {
+    "description": "翻譯文件格式化標準",
+    "starlight_asides": {
+      "enabled": true,
+      "mapping": {
+        "note": "補充說明、設計者備註",
+        "tip": "遊戲技巧、策略建議",
+        "caution": "常見錯誤、注意事項",
+        "danger": "嚴重後果、不可逆動作"
+      }
+    },
+    "card_grid": {
+      "enabled": false,
+      "reason": "此書不需要卡片式排版"
+    },
+    "tabs": {
+      "enabled": false,
+      "reason": "無替代規則或切換式內容"
+    },
+    "tables": {
+      "use_for": ["角色屬性", "裝備列表"],
+      "notes": ""
+    },
+    "dice_tables": {
+      "enabled": true,
+      "format": "使用 1d6 等標記，含明確骰值範圍"
+    },
+    "additional_guidelines": []
+  }
+}
+```
+
+Values above are examples; actual values depend on user choices.
+
+### 5. Extract and Select Images
+
+#### 5.1 Extract Images from PDF
 
 Images are automatically extracted during step 2 (`extract_pdf.py`).
 
 Images saved to `data/markdown/images/<pdf_name>/`.
 
-#### 4.2 Present Images to User
+#### 5.2 Present Images to User
 
 List all extracted images with thumbnails or descriptions:
 
@@ -82,7 +171,7 @@ List all extracted images with thumbnails or descriptions:
 請選擇用途：
 ```
 
-#### 4.3 Ask Image Assignments
+#### 5.3 Ask Image Assignments
 
 Use AskUserQuestion for each image type:
 
@@ -98,7 +187,7 @@ Use AskUserQuestion for each image type:
 - Recommendation: 1200x630 is ideal, choose an image that represents the game
 - Location: `docs/public/og-image.jpg`
 
-#### 4.4 Process Selected Images
+#### 5.4 Process Selected Images
 
 Copy selected images to appropriate locations:
 
@@ -113,9 +202,9 @@ cp data/markdown/images/<pdf_name>/<selected_bg>.jpg docs/public/bg.jpg
 cp data/markdown/images/<pdf_name>/<selected_og>.jpg docs/public/og-image.jpg
 ```
 
-### 5. Configure Visual Theme
+### 6. Configure Visual Theme
 
-#### 5.1 Background Mode
+#### 6.1 Background Mode
 
 Use AskUserQuestion:
 
@@ -129,7 +218,7 @@ Use AskUserQuestion:
 目前背景圖的主色調是什麼？
 ```
 
-#### 5.2 Overlay Settings
+#### 6.2 Overlay Settings
 
 Based on background image analysis, ask:
 
@@ -153,7 +242,7 @@ Update `docs/src/styles/custom.css`:
 --overlay-opacity: <user_choice>;
 ```
 
-#### 5.3 Color Palette Design
+#### 6.3 Color Palette Design
 
 Use AskUserQuestion to determine color style:
 
@@ -186,7 +275,7 @@ Use AskUserQuestion to determine color style:
    - 提供主色 HEX 或描述風格
 ```
 
-#### 5.4 Generate Color Variables
+#### 6.4 Generate Color Variables
 
 Based on user choice, generate an HSL color scheme:
 
@@ -230,7 +319,7 @@ Based on user choice, generate an HSL color scheme:
 --color-quaternary-h: 15; /* Orange gold */
 ```
 
-#### 5.5 Apply Theme Settings
+#### 6.5 Apply Theme Settings
 
 Update `docs/src/styles/custom.css` with selected colors.
 
@@ -247,7 +336,7 @@ body {
 }
 ```
 
-### 6. Identify Key Terms (Interactive)
+### 7. Identify Key Terms (Interactive)
 
 Invoke `terminology-management` skill and run candidate generation from extracted docs:
 
@@ -264,7 +353,7 @@ uv run python scripts/term_generate.py --min-frequency 2
 
 Present terms to user for translation confirmation.
 
-### 7. Configure Proper Noun Translation Policy (Required)
+### 8. Configure Proper Noun Translation Policy (Required)
 
 Before building the glossary, ask user to choose proper noun handling policy:
 
@@ -283,7 +372,7 @@ Record the decision in `style-decisions.json`:
 }
 ```
 
-### 8. Build Glossary (Single Source of Truth)
+### 9. Build Glossary (Single Source of Truth)
 
 Create `glossary.json` with confirmed terms:
 
@@ -312,13 +401,13 @@ Rules:
 
 Ask user about style preferences and record in `style-decisions.json`.
 
-### 9. Split Content
+### 10. Split Content
 
 ```bash
 uv run python scripts/split_chapters.py
 ```
 
-### 10. Generate Homepage index.md from style-decisions.json
+### 11. Generate Homepage index.md from style-decisions.json
 
 Before chapter splitting, create/update `docs/src/content/docs/index.md` using project metadata and style decisions.
 
@@ -332,7 +421,7 @@ Before chapter splitting, create/update `docs/src/content/docs/index.md` using p
    - If `visibility=private`, do not render repo link.
 4. Keep this logic data-driven: homepage content must follow `style-decisions.json` as source of truth.
 
-### 11. Analyze and Split index.md
+### 12. Analyze and Split index.md
 
 After initial split, analyze the generated `index.md` to create proper chapter structure:
 
@@ -368,7 +457,7 @@ After initial split, analyze the generated `index.md` to create proper chapter s
    ---
    ```
 
-### 12. Configure Chapters
+### 13. Configure Chapters
 
 Finalize `chapters.json` after all splits are done:
 1. Show table of contents from PDF and actual generated files
@@ -376,13 +465,13 @@ Finalize `chapters.json` after all splits are done:
 3. Map page ranges and file paths to output files
 4. Ensure order matches `sidebar.order` and actual navigation
 
-### 13. Verify
+### 14. Verify
 
 - Check generated files in `docs/src/content/docs/`
 - Verify sidebar order matches original TOC
 - Preview: `cd docs && bun dev`
 
-### 14. Record Configuration
+### 15. Record Configuration
 
 Save all visual settings to `style-decisions.json`:
 
@@ -416,7 +505,7 @@ Save all visual settings to `style-decisions.json`:
 }
 ```
 
-### 15. Final Cleanup and Sidebar Refresh
+### 16. Final Cleanup and Sidebar Refresh
 
 After cropping and split operations are complete:
 
@@ -431,18 +520,19 @@ After cropping and split operations are complete:
 - [ ] Step 1: 已定位 PDF（`data/pdfs/`）並確認來源檔案
 - [ ] Step 2: 已完成內容抽取（`extract_pdf.py`）並檢查 `data/markdown/` 輸出
 - [ ] Step 3: 已完成 PDF 裁切結果檢查與必要拆分，並確認重新抽取完整
-- [ ] Step 4: 已完成圖片挑選與資產複製（hero/background/og）
-- [ ] Step 5: 已完成視覺主題設定（背景模式、遮罩、色票）
-- [ ] Step 6: 已完成術語盤點，並以繁體中文與使用者確認
-- [ ] Step 7: 已與使用者確認專有名詞翻譯策略並寫入 `style-decisions.json`
-- [ ] Step 8: 已更新 `glossary.json` 與風格決策
-- [ ] Step 9: 已完成初始章節拆分（`split_chapters.py`）
-- [ ] Step 10: 已依 `style-decisions.json` 產生首頁 `index.md`（含 repo link 顯示規則）
-- [ ] Step 11: 已完成 `index.md` 分析與章節拆分落檔
-- [ ] Step 12: 已完成 `chapters.json` 最終配置，且順序與 sidebar 一致
-- [ ] Step 13: 已完成文件預覽驗證（目錄、連結、顯示）
-- [ ] Step 14: 已更新 `style-decisions.json` 設定紀錄
-- [ ] Step 15: 已移除不必要範例文件並重整 sidebar
+- [ ] Step 4: 已完成書本內容概覽，並與使用者確認文件格式化標準（寫入 `style-decisions.json.document_format`）
+- [ ] Step 5: 已完成圖片挑選與資產複製（hero/background/og）
+- [ ] Step 6: 已完成視覺主題設定（背景模式、遮罩、色票）
+- [ ] Step 7: 已完成術語盤點，並以繁體中文與使用者確認
+- [ ] Step 8: 已與使用者確認專有名詞翻譯策略並寫入 `style-decisions.json`
+- [ ] Step 9: 已更新 `glossary.json` 與風格決策
+- [ ] Step 10: 已完成初始章節拆分（`split_chapters.py`）
+- [ ] Step 11: 已依 `style-decisions.json` 產生首頁 `index.md`（含 repo link 顯示規則）
+- [ ] Step 12: 已完成 `index.md` 分析與章節拆分落檔
+- [ ] Step 13: 已完成 `chapters.json` 最終配置，且順序與 sidebar 一致
+- [ ] Step 14: 已完成文件預覽驗證（目錄、連結、顯示）
+- [ ] Step 15: 已更新 `style-decisions.json` 設定紀錄
+- [ ] Step 16: 已移除不必要範例文件並重整 sidebar
 - [ ] Gate: 已確認全程與使用者互動皆為繁體中文
 
 ## Example Usage

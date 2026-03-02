@@ -67,6 +67,7 @@ Read:
 - `glossary.json` - term mappings
 - `style-decisions.json` - style choices
 - `style-decisions.json.proper_nouns.mode` - proper noun translation policy selected during `/init-doc`
+- `style-decisions.json.document_format` - document formatting standards decided during `/init-doc`
 
 ### 4. Translate Content
 
@@ -75,8 +76,9 @@ For each target file:
 1. **Read source** - Load current content
 2. **Identify segments** - Paragraphs, lists, tables
 3. **Apply glossary** - Use consistent terminology
-4. **Translate manually** - Perform human translation segment by segment
-5. **Preserve structure** - Keep frontmatter, markdown syntax
+4. **Apply formatting standards** - Format content per `document_format` in `style-decisions.json`
+5. **Translate manually** - Perform human translation segment by segment
+6. **Preserve structure** - Keep frontmatter, markdown syntax
 
 ### Mandatory Translation Constraint
 
@@ -97,6 +99,7 @@ For each target file:
 | Links | Translate text, keep URLs |
 | Game terms | Apply glossary strictly |
 | Translation method | Manual human translation only; no script-based text replacement |
+| Document format | Follow `style-decisions.json.document_format`; use enabled Starlight components per configured mapping; do not use disabled components |
 
 ### Mode-Specific Rules
 
@@ -111,6 +114,19 @@ For each target file:
 - Merge repeated concepts
 - Use bullet points to organize key information
 - Suitable for quick-reference rule summaries
+
+### Formatting Standards Application (Required)
+
+When `document_format` exists in `style-decisions.json`, apply during translation:
+
+1. **Starlight Asides**: If `starlight_asides.enabled`, convert matching content (tips, warnings, notes, designer commentary) into `:::note`, `:::tip`, `:::caution`, or `:::danger` blocks per the configured `mapping`.
+2. **Card Grid**: If `card_grid.enabled`, use `<CardGrid>` + `<Card>` for parallel content (character classes, item lists). Add required Starlight imports.
+3. **Tabs**: If `tabs.enabled`, use `<Tabs>` + `<TabItem>` for switchable content. Add required Starlight imports.
+4. **Tables**: Follow `tables.use_for` for table formatting decisions.
+5. **Dice Tables**: If `dice_tables.enabled`, format random tables with clear roll ranges per configured format.
+6. **Additional Guidelines**: Apply rules in `additional_guidelines` array.
+
+If `document_format` does not exist in `style-decisions.json`, fall back to plain Markdown without Starlight components.
 
 ### 5. New Terms
 
