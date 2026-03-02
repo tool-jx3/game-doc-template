@@ -103,18 +103,24 @@ uv run python scripts/validate_glossary.py
 uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
 ```
 
-### Step 8: Agent-Driven Chapter Split and Navigation
+### Step 8: Multi-Agent Chapter Split and Navigation
 
-1. Dispatch chapter split reviewer using `./chapter-split-reviewer-prompt.md` to decide whether splitting is needed and produce `chapters.json` payload.
-2. Write returned `chapters_config` to `chapters.json` (no user confirmation for split decision).
-3. Run split:
+Run chapter split planning with two focused agents.
+Pipeline: `toc-planner -> wordcount-planner`.
+
+1. Create draft config path:
+   - `.claude/skills/init-doc/.state/chapters.draft.json`
+2. Dispatch toc planner using `./split-planner-prompt.md` to generate TOC-aligned draft `chapters_config`.
+3. Dispatch wordcount planner using `./split-wordcount-planner-prompt.md` to rebalance file granularity based on word count while preserving TOC order.
+4. If wordcount planner reports unresolved critical issues, stop and ask user in Traditional Chinese before writing `chapters.json`.
+5. Write final config to `chapters.json` (no user confirmation for split decision), then run split:
 
 ```bash
 uv run python scripts/split_chapters.py
 ```
 
-4. Generate/update homepage `docs/src/content/docs/index.mdx` from fixed template `./homepage-index-template.mdx`.
-5. Finalize split outputs and `chapters.json` mapping.
+6. Generate/update homepage `docs/src/content/docs/index.mdx` from fixed template `./homepage-index-template.mdx`.
+7. Finalize split outputs and `chapters.json` mapping.
 
 ### Step 9: Create Translation Progress Tracker
 
@@ -143,21 +149,32 @@ If any gate fails, stop and fix before completion.
 ## Prompt Templates
 
 Prompt templates are colocated with this skill:
-- `./chapter-split-reviewer-prompt.md`
+- `./split-planner-prompt.md`
+- `./split-wordcount-planner-prompt.md`
 - `./homepage-index-template.mdx`
 
 ## Dispatch Templates
 
-Use this fixed dispatch pattern:
+Use these fixed dispatch patterns:
 
-### chapter-split-reviewer
+### toc-planner
 
 ```text
 Task tool (general-purpose):
-  description: "Plan chapter split for <SOURCE_PAGES_FILE>"
-  prompt template: ./chapter-split-reviewer-prompt.md
+  description: "Draft TOC-based split config for <SOURCE_PAGES_FILE>"
+  prompt template: ./split-planner-prompt.md
   placeholders:
-    <SOURCE_PAGES_FILE>, <OUTPUT_CONFIG_PATH>
+    <SOURCE_PAGES_FILE>, <DRAFT_CONFIG_PATH>
+```
+
+### wordcount-planner
+
+```text
+Task tool (general-purpose):
+  description: "Rebalance split config by wordcount for <SOURCE_PAGES_FILE>"
+  prompt template: ./split-wordcount-planner-prompt.md
+  placeholders:
+    <SOURCE_PAGES_FILE>, <DRAFT_CONFIG_PATH>
 ```
 
 ## Progress Sync Contract (Required)
@@ -170,7 +187,7 @@ Task tool (general-purpose):
 
 Stop when:
 - source extraction repeatedly fails
-- chapter split reviewer cannot produce a safe non-overlapping page map
+- chapter split planners cannot produce a usable config
 - glossary validation cannot be resolved safely
 - docs build fails with unclear root cause
 
@@ -179,13 +196,13 @@ Stop when:
 Return to earlier steps when:
 - user changes formatting/theme policy
 - user changes proper noun strategy
-- split strategy changes after review
+- source markdown changes enough to invalidate page mapping
 
 ## Red Flags
 
 Never:
 - continue after failed validation gates
-- ask user to approve chapter split after reviewer output is available
+- ignore TOC order when applying wordcount balancing
 - skip user confirmation for formatting/proper noun policy
 - leave progress tracker uninitialized at handoff
 
