@@ -116,24 +116,46 @@ class TestExtractPdf(unittest.TestCase):
             self.assertEqual(result.read_text(encoding="utf-8"), "hello")
 
     def test_extract_with_pages_writes_page_markers(self) -> None:
-        class FakePage:
-            def __init__(self, text: str) -> None:
-                self._text = text
-
-            def get_text(self, _: str) -> str:
-                return self._text
+        page_texts = ["p1", "p2"]
 
         class FakeDoc(list):
-            pass
+            def close(self) -> None:
+                pass
+
+        class FakeSingleDoc:
+            def insert_pdf(self, doc: object, from_page: int = 0, to_page: int = 0) -> None:
+                self._page_idx = from_page
+
+            def save(self, path: str) -> None:
+                Path(path).write_text(f"fake-pdf-{self._page_idx}", encoding="utf-8")
+
+            def close(self) -> None:
+                pass
 
         class FakePyMuPDF:
             @staticmethod
-            def open(_: str) -> FakeDoc:
-                return FakeDoc([FakePage("p1"), FakePage("p2")])
+            def open(path: str | None = None) -> FakeDoc | FakeSingleDoc:
+                if path is not None:
+                    return FakeDoc([None, None])  # 2 pages
+                return FakeSingleDoc()
+
+        class FakeResult:
+            def __init__(self, text: str) -> None:
+                self.text_content = text
+
+        call_count = 0
+
+        class FakeMarkItDown:
+            def convert(self, path: str) -> FakeResult:
+                nonlocal call_count
+                text = page_texts[call_count]
+                call_count += 1
+                return FakeResult(text)
 
         with tempfile.TemporaryDirectory() as td:
             out = Path(td)
-            with patch.object(ep, "pymupdf", FakePyMuPDF):
+            with patch.object(ep, "pymupdf", FakePyMuPDF), \
+                 patch.object(ep, "MarkItDown", FakeMarkItDown):
                 result = ep.extract_with_pages(Path("sample.pdf"), out)
             content = result.read_text(encoding="utf-8")
             self.assertIn("<!-- PAGE 1 -->", content)

@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 ## Overview
 
-Run iterative translation with a single reviewer loop and strict state/progress controls.
+Run iterative translation with a single reviewer loop.
 Pipeline: `translator -> reviewer -> refiner` (max 2 iterations).
 
 **Core principle:** Source-fidelity and quality checked in one pass; no overwrite unless reviewer passes.
@@ -50,33 +50,21 @@ If missing, ask user in Traditional Chinese:
 
 Persist mode before dispatch.
 
-### Step 5: Initialize Runtime State
+### Step 5: Prepare Draft Directory
 
 ```bash
 mkdir -p .claude/skills/super-translate/.state/drafts
-uv run python .claude/skills/super-translate/scripts/run_state.py start \
-  --targets <file1> <file2> ...
 ```
-
-If initialization fails, abort run.
 
 ### Step 6: Execute Per Batch (Default First 3 Files)
 
 For each target file:
 1. mark TodoWrite item `in_progress`
-2. set progress status `in_progress` and update notes
-3. mark runtime `running`
-
-```bash
-uv run python .claude/skills/super-translate/scripts/run_state.py update \
-  --file <target_file> \
-  --status running
-```
-
-4. dispatch translator using `./translator-prompt.md` to produce draft only (do not overwrite source)
-5. dispatch reviewer using `./reviewer-prompt.md` (combined source fidelity + quality check)
-6. if fail -> dispatch refiner using `./refiner-prompt.md` -> re-run reviewer
-7. cap at 2 iterations total
+2. update `translation-progress.json` status to `in_progress`
+3. dispatch translator using `./translator-prompt.md` to produce draft only (do not overwrite source)
+4. dispatch reviewer using `./reviewer-prompt.md` (combined source fidelity + quality check)
+5. if fail -> dispatch refiner using `./refiner-prompt.md` -> re-run reviewer
+6. cap at 2 iterations total
 
 If 2 iterations still have critical issues, ask user in Traditional Chinese:
 - **保留目前草稿，不覆蓋原始檔，稍後手動修正後再續跑**
@@ -93,19 +81,16 @@ uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
 
 Then rerun the file loop.
 
-### Step 7: Controlled Writeback and State Update
+### Step 7: Controlled Writeback
 
 Only if reviewer passes:
-- atomically replace source with draft
-- mark runtime `pass`
-- set chapter `completed`
-- recalculate `_meta.completed`
+- replace source with draft
+- update `translation-progress.json` status to `completed`, recalculate `_meta.completed`
 - close TodoWrite file item
 
 If blocked/failed:
 - keep source unchanged
-- mark runtime `blocked` or `failed`
-- keep chapter `in_progress`
+- keep `translation-progress.json` status as `in_progress`
 - mark TodoWrite as blocked
 
 ### Step 8: Batch Checkpoint Report
@@ -119,7 +104,6 @@ After each batch:
 ### Step 9: Final Verification
 
 ```bash
-uv run python .claude/skills/super-translate/scripts/run_state.py end
 uv run python scripts/validate_glossary.py
 uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
 ```
@@ -133,10 +117,6 @@ Prompt templates are colocated with this skill:
 - `./translator-prompt.md`
 - `./reviewer-prompt.md` (combined source + quality review)
 - `./refiner-prompt.md`
-
-Legacy templates (kept for reference, no longer dispatched):
-- `./source-reviewer-prompt.md`
-- `./quality-reviewer-prompt.md`
 
 ## Dispatch Templates
 
@@ -179,31 +159,27 @@ You: Start /super-translate for rules/combat.md and rules/equipment.md
 
 [Step 1] Load scope and verify files
 [Step 2] Create TodoWrite for both targets + batch checkpoint
-[Step 3] Run terminology preflight (validate_glossary + term_read)
+[Step 3] Run terminology preflight
 [Step 4] Resolve translation mode
-[Step 5] Initialize run_state
+[Step 5] Prepare draft directory
 
 Batch 1: rules/combat.md
   - translator -> draft file generated
   - reviewer -> found 1 critical issue
   - refiner -> fixed issue
   - reviewer -> pass
-  - writeback source file
-  - update run_state + translation-progress + TodoWrite
+  - writeback + update translation-progress + TodoWrite
 
 Batch 1: rules/equipment.md
   - translator -> draft file generated
   - reviewer -> pass
-  - writeback source file
-  - update run_state + translation-progress + TodoWrite
+  - writeback + update translation-progress + TodoWrite
 
 [Batch checkpoint report]
-  - completed: 2 files
-  - blocked: 0
+  - completed: 2, blocked: 0
   - ask user: continue next batch?
 
 [Final verification]
-  - run_state end
   - validate_glossary + term_read
   - run check-consistency
 ```
@@ -228,7 +204,6 @@ Batch 1: rules/equipment.md
 
 Stop when:
 - repeated critical findings remain after iteration cap
-- runtime state script fails unexpectedly
 - subagent output is malformed and not safely recoverable
 
 ## Red Flags

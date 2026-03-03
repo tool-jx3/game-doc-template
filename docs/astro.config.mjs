@@ -106,7 +106,7 @@ export default defineConfig({
 				{
 					label: '主持人指南',
 					autogenerate: { directory: 'guides' },
-				},
+				}
 			],
 			customCss: ['./src/styles/custom.css'],
 		}),

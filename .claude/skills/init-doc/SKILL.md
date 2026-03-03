@@ -113,14 +113,18 @@ Pipeline: `toc-planner -> wordcount-planner`.
 2. Dispatch toc planner using `./split-planner-prompt.md` to generate TOC-aligned draft `chapters_config`.
 3. Dispatch wordcount planner using `./split-wordcount-planner-prompt.md` to rebalance file granularity based on word count while preserving TOC order.
 4. If wordcount planner reports unresolved critical issues, stop and ask user in Traditional Chinese before writing `chapters.json`.
-5. Write final config to `chapters.json` (no user confirmation for split decision), then run split:
+5. Write final config to `chapters.json` (no user confirmation for split decision), then run split and generate navigation:
 
 ```bash
 uv run python scripts/split_chapters.py
+uv run python scripts/generate_nav.py
 ```
 
-6. Generate/update homepage `docs/src/content/docs/index.mdx` from fixed template `./homepage-index-template.mdx`.
-7. Finalize split outputs and `chapters.json` mapping.
+`generate_nav.py` reads `chapters.json` and:
+- generates `docs/src/content/docs/index.mdx` (homepage with dynamic CardGrid)
+- updates `docs/astro.config.mjs` sidebar to match chapter slugs
+
+6. Finalize split outputs and `chapters.json` mapping.
 
 ### Step 9: Create Translation Progress Tracker
 
@@ -151,7 +155,6 @@ If any gate fails, stop and fix before completion.
 Prompt templates are colocated with this skill:
 - `./split-planner-prompt.md`
 - `./split-wordcount-planner-prompt.md`
-- `./homepage-index-template.mdx`
 
 ## Dispatch Templates
 
