@@ -109,7 +109,7 @@ const SITE_CONFIG = {
 ### 使用原則
 
 - 建議流程：`new-project` → `init-doc` → `translate`（或高品質版 `super-translate`）
-- `translate`：單輪線性翻譯，適合快速草稿；`super-translate`：多 agent 審查循環（最多 3 輪），適合正式發布
+- `translate`：單輪線性翻譯，適合快速草稿；`super-translate` (beta)：多 agent 審查循環（最多 2 輪），適合正式發布
 - 翻譯前先確認術語（`glossary.json`），交付前執行一致性與完整性檢查
 
 ### 快速開始
@@ -138,7 +138,7 @@ translate
 super-translate [target]
 ```
 
-多 agent 審查循環（Translator → Source Reviewer → Quality Reviewer → Refiner），最多迭代 3 輪，自動修正術語不一致、殘留英文、簡體字等問題。
+多 agent 審查循環（Translator → Reviewer → Refiner），最多迭代 2 輪，自動修正術語不一致、殘留英文、簡體字等問題。(beta)
 
 ### 常用指令對照
 
@@ -147,7 +147,7 @@ super-translate [target]
 | 建立新專案                       | `new-project <pdf-path>`     |
 | 初始化翻譯專案                   | `init-doc`                   |
 | 翻譯章節或檔案                   | `translate [target]`         |
-| 翻譯＋多輪審查（高品質輸出）     | `super-translate [target]`   |
+| 翻譯＋多輪審查（beta）           | `super-translate [target]`   |
 | 術語一致性檢查                   | `check-consistency`          |
 | 術語決策與批次替換               | `term-decision`              |
 | 內容完整性檢查                   | `check-completeness`         |
@@ -179,7 +179,7 @@ super-translate [target]
 5. 執行翻譯（套用術語表）
    翻譯時以 `glossary.json` 優先，並保留 Markdown 結構。原理：翻譯不是逐句自由發揮，而是「內容翻譯 + 術語套版」。
    - `translate`：單輪翻譯，適合快速草稿或已有良好術語表的情況。
-   - `super-translate`：多 agent 翻譯審查循環，Translator → Reviewer → Refiner 最多迭代 3 輪，自動修正術語不一致、殘留英文、簡體字、Starlight 組件誤用等問題，適合正式發布前的高品質輸出。
+   - `super-translate` (beta)：多 agent 翻譯審查循環，Translator → Reviewer → Refiner 最多迭代 2 輪，自動修正術語不一致、殘留英文、簡體字等問題，適合正式發布前的高品質輸出。
 
 6. 術語校驗與完整性檢查  
    原則：翻譯後再做一次全站術語稽核，收斂不一致。  
