@@ -132,6 +132,14 @@ init-doc
 translate
 ```
 
+4. 高品質翻譯（推薦正式發布使用）
+
+```bash
+super-translate [target]
+```
+
+多 agent 審查循環（Translator → Source Reviewer → Quality Reviewer → Refiner），最多迭代 3 輪，自動修正術語不一致、殘留英文、簡體字等問題。
+
 ### 常用指令對照
 
 | 功能                             | 指令                         |
