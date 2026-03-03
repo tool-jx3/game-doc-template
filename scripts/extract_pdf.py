@@ -44,17 +44,34 @@ def extract_with_markitdown(pdf_path: Path, output_dir: Path) -> Path | None:
 
 
 def extract_with_pages(pdf_path: Path, output_dir: Path) -> Path | None:
-    """使用 pymupdf 提取 PDF 內容（保留頁碼標記，用於章節拆分）"""
+    """使用 markitdown 逐頁提取 PDF 內容（含頁碼標記，用於章節拆分）"""
+    if MarkItDown is None:
+        print("⚠️  markitdown 未安裝，跳過")
+        return None
     if pymupdf is None:
-        print("⚠️  pymupdf 未安裝，跳過")
+        print("⚠️  pymupdf 未安裝（需要用於分頁），跳過")
         return None
 
+    import tempfile
+
+    md = MarkItDown()
     doc = pymupdf.open(str(pdf_path))
 
     content_parts = []
-    for page_num, page in enumerate(doc, 1):
-        text = page.get_text("text")
-        content_parts.append(f"\n\n<!-- PAGE {page_num} -->\n\n{text}")
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        for page_num in range(len(doc)):
+            single = pymupdf.open()
+            single.insert_pdf(doc, from_page=page_num, to_page=page_num)
+            tmp_pdf = Path(tmp_dir) / f"page_{page_num + 1}.pdf"
+            single.save(str(tmp_pdf))
+            single.close()
+
+            result = md.convert(str(tmp_pdf))
+            content_parts.append(
+                f"\n\n<!-- PAGE {page_num + 1} -->\n\n{result.text_content.strip()}"
+            )
+
+    doc.close()
 
     output_file = output_dir / f"{pdf_path.stem}_pages.md"
     output_file.write_text("".join(content_parts), encoding="utf-8")
