@@ -645,6 +645,11 @@ starlight-toc h2 {
   color: hsl(0, 0%, 10%) !important;
 }
 
+starlight-toc a[aria-current="true"] {
+  background: var(--color-primary-glow) !important;
+  color: var(--color-primary) !important;
+}
+
 /* Mobile TOC Dropdown */
 mobile-starlight-toc,
 mobile-starlight-toc .dropdown,

@@ -643,6 +643,11 @@ starlight-toc a:hover {
   color: var(--sl-color-white) !important;
 }
 
+starlight-toc a[aria-current="true"] {
+  background: var(--color-primary-glow) !important;
+  color: var(--color-primary) !important;
+}
+
 /* Mobile TOC Dropdown */
 mobile-starlight-toc,
 mobile-starlight-toc .dropdown,
