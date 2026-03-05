@@ -73,7 +73,6 @@ If 2 iterations still have critical issues, ask user in Traditional Chinese:
 Unknown term handling:
 
 ```bash
-uv run python scripts/term_edit.py --term "<TERM>" --cal
 uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term
 uv run python scripts/validate_glossary.py
 uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
@@ -193,7 +192,7 @@ Batch 1: rules/equipment.md
 **Correct:** Sync TodoWrite and `translation-progress.json` after each review loop
 
 **Wrong:** Invent translation for unknown terms
-**Correct:** Run `term_edit.py --cal` workflow, then rerun affected file
+**Correct:** Run `term_edit.py --set-zh` workflow (auto-runs `--cal`), then rerun affected file
 
 ## Progress Sync Contract (Required)
 

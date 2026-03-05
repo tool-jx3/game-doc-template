@@ -43,3 +43,8 @@ npm-debug.log*
 # Lock files (optional - remove if you want to commit them)
 # package-lock.json
 # bun.lockb
+
+.claude/settings.local.json
+
+# Drafts
+.state/

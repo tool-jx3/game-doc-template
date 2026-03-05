@@ -14,7 +14,7 @@ from _term_lib import (
     INDEX_CACHE,
     PROJECT_ROOT,
     build_corpus,
-    count_term,
+    count_terms_batch,
     extract_candidates,
     is_managed_term,
     load_glossary,
@@ -83,23 +83,34 @@ def main() -> None:
     term_usage: list[dict[str, Any]] = []
     forbidden_hits: list[dict[str, Any]] = []
 
+    # Collect all terms + forbidden variants for a single batch pass.
+    all_search_terms: list[str] = []
+    forbidden_map: dict[str, str] = {}  # forbidden_variant -> parent_term
     for term, entry in managed_terms:
-        total, files = count_term(corpus, term)
+        all_search_terms.append(term)
+        for forbidden in entry.get("forbidden", []):
+            all_search_terms.append(forbidden)
+            forbidden_map[forbidden] = term
+
+    batch_results = count_terms_batch(corpus, all_search_terms)
+
+    for term, _entry in managed_terms:
+        total, files = batch_results.get(term, (0, {}))
         term_usage.append({"term": term, "count": total, "files": files})
         if total == 0:
             missing_terms.append({"term": term})
 
-        for forbidden in entry.get("forbidden", []):
-            bad_total, bad_files = count_term(corpus, forbidden)
-            if bad_total > 0:
-                forbidden_hits.append(
-                    {
-                        "term": term,
-                        "forbidden": forbidden,
-                        "count": bad_total,
-                        "files": bad_files,
-                    }
-                )
+    for forbidden, parent_term in forbidden_map.items():
+        bad_total, bad_files = batch_results.get(forbidden, (0, {}))
+        if bad_total > 0:
+            forbidden_hits.append(
+                {
+                    "term": parent_term,
+                    "forbidden": forbidden,
+                    "count": bad_total,
+                    "files": bad_files,
+                }
+            )
 
     known_keys = {k.lower() for k in glossary.keys() if k != "_meta"}
     unknown = []

@@ -62,6 +62,7 @@ FUNCTION_POS = {
 
 _NLP: English | None = None
 _DOC_CACHE: dict[str, Doc] = {}
+_NORM_CACHE: dict[int, list[dict[str, Any]]] = {}
 
 
 def get_nlp() -> English:
@@ -217,6 +218,10 @@ def parse_doc(text: str) -> Doc:
 
 
 def _normalized_tokens(doc: Doc) -> list[dict[str, Any]]:
+    key = id(doc)
+    cached = _NORM_CACHE.get(key)
+    if cached is not None:
+        return cached
     tokens: list[dict[str, Any]] = []
     for tok in doc:
         if tok.is_space or tok.is_punct:
@@ -230,6 +235,7 @@ def _normalized_tokens(doc: Doc) -> list[dict[str, Any]]:
                 "end": tok.idx + len(tok.text),
             }
         )
+    _NORM_CACHE[key] = tokens
     return tokens
 
 
@@ -307,6 +313,59 @@ def count_term(corpus: dict[str, str], term: str) -> tuple[int, dict[str, int]]:
             per_file[rel] = count
             total += count
     return total, per_file
+
+
+def count_terms_batch(
+    corpus: dict[str, str], terms: list[str]
+) -> dict[str, tuple[int, dict[str, int]]]:
+    """Count many terms in a single pass per file using a first-token index."""
+    from collections import defaultdict as _dd
+
+    # Pre-compute normalised token sequences for each term.
+    term_norms_map: dict[str, list[str]] = {}
+    first_idx: dict[str, list[tuple[str, list[str]]]] = _dd(list)
+    for term in terms:
+        norms = _term_norms(term)
+        if norms:
+            term_norms_map[term] = norms
+            first_idx[norms[0]].append((term, norms))
+
+    results: dict[str, tuple[int, dict[str, int]]] = {t: (0, {}) for t in terms}
+
+    for rel, content in corpus.items():
+        if not SPACY_AVAILABLE:
+            # Fall back to per-term regex when spacy is absent.
+            for term in terms:
+                count = len(find_term_spans(content, term))
+                if count > 0:
+                    total, pf = results[term]
+                    pf[rel] = count
+                    results[term] = (total + count, pf)
+            continue
+
+        doc = parse_doc(content)
+        norm_tokens = _normalized_tokens(doc)
+        norms_list = [t["norm"] for t in norm_tokens]
+        ntlen = len(norms_list)
+
+        file_counts: Counter[str] = Counter()
+        for i, norm in enumerate(norms_list):
+            candidates = first_idx.get(norm)
+            if not candidates:
+                continue
+            for term, tnorms in candidates:
+                tlen = len(tnorms)
+                if i + tlen > ntlen:
+                    continue
+                if norms_list[i : i + tlen] == tnorms:
+                    file_counts[term] += 1
+
+        for term, count in file_counts.items():
+            total, pf = results[term]
+            pf[rel] = count
+            results[term] = (total + count, pf)
+
+    return results
 
 
 def sample_contexts(corpus: dict[str, str], term: str, limit: int = 5) -> list[str]:

@@ -173,8 +173,7 @@ super-translate [target]
    原則：`glossary.json` 是唯一術語來源，先定義再翻譯，避免同詞多譯。  
    建議指令：
    1. `uv run python scripts/term_generate.py --min-frequency 2`（找高頻候選詞）
-   2. `uv run python scripts/term_edit.py --term "<TERM>" --cal`（做全站證據計算）
-   3. `uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term`（核准術語）
+   2. `uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term`（核准術語，未管理詞彙會自動執行 `--cal`）
 
 5. 執行翻譯（套用術語表）
    翻譯時以 `glossary.json` 優先，並保留 Markdown 結構。原理：翻譯不是逐句自由發揮，而是「內容翻譯 + 術語套版」。

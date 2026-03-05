@@ -40,11 +40,16 @@ If `proper_nouns.mode != keep_original`, repeated proper nouns (`>=2`) must be m
 
 ### Step 3: Edit Glossary Safely
 
-For unmanaged terms, run CAL first:
+For unmanaged terms, `--cal` is auto-run when editing:
+
+```bash
+uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH_TERM>" --status approved --mark-term
+```
+
+To run `--cal` standalone (inspect evidence without editing):
 
 ```bash
 uv run python scripts/term_edit.py --term "<TERM>" --cal
-uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH_TERM>" --status approved --mark-term
 ```
 
 ### Step 4: Validate Usage Across Docs
@@ -86,7 +91,6 @@ Return to Step 2 when:
 ## Red Flags
 
 Never:
-- edit unmanaged terms without CAL
 - bypass glossary schema validation
 - leave inconsistent managed terms unresolved
 

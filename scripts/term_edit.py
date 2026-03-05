@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Interactive glossary editor with required --cal pre-check."""
+"""Interactive glossary editor with auto --cal for unmanaged terms."""
 
 from __future__ import annotations
 
@@ -159,9 +159,9 @@ def mutate_term(args: argparse.Namespace, glossary: dict[str, Any]) -> bool:
 
     unmanaged_before = not is_managed_term(term, entry)
     if unmanaged_before and not args.force and not has_fresh_cal(term, args.root):
-        print("❌ This term is unmanaged. Run `--cal` first to collect full-site evidence.")
-        print(f"   Example: uv run python scripts/term_edit.py --term \"{term}\" --cal")
-        return False
+        print(f"ℹ️ Auto-running --cal for unmanaged term: {term}")
+        run_calculation(args, glossary)
+
 
     if entry is None:
         entry = {}

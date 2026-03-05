@@ -67,7 +67,6 @@ For each issue:
 2. Add or update glossary entries:
 
 ```bash
-uv run python scripts/term_edit.py --term "<TERM>" --cal
 uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term
 ```
 

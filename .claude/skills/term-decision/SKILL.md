@@ -44,7 +44,6 @@ Collect:
 Record in `style-decisions.json` and update `glossary.json`:
 
 ```bash
-uv run python scripts/term_edit.py --term "<TERM>" --cal
 uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term --notes "<REASON>"
 ```
 
@@ -80,7 +79,7 @@ Return to Step 2 when:
 
 Never:
 - apply unapproved term variants globally
-- skip `--cal` for unmanaged terms
+- skip post-edit glossary validation
 - skip post-replacement verification
 
 ## Next Step

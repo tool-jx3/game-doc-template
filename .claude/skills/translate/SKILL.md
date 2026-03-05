@@ -80,7 +80,6 @@ For each target file:
 **Unknown term handling:**
 
 ```bash
-uv run python scripts/term_edit.py --term "<TERM>" --cal
 uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term
 uv run python scripts/term_read.py --fail-on-forbidden
 ```

@@ -137,18 +137,18 @@ uv run python scripts/term_generate.py --min-frequency 3
 - 產生高頻候選詞
 - 自動排除 `glossary.json` 已存在詞彙
 
-### 2) 編輯術語（必須先 `--cal`）
+### 2) 編輯術語（自動執行 `--cal`）
 
 ```bash
-# 第一步：先計算出現次數（必要）
-uv run python scripts/term_edit.py --term "Stress" --cal
-
-# 第二步：再標記成術語
+# 直接標記成術語（未管理詞彙會自動先執行 --cal）
 uv run python scripts/term_edit.py --term "Stress" --mark-term --set-zh "壓力" --status approved
+
+# 若只想查看證據而不編輯，可單獨執行 --cal
+uv run python scripts/term_edit.py --term "Stress" --cal
 ```
 
 規則：
-- 未管理詞彙在編輯前必須先執行 `--cal`
+- 編輯未管理詞彙時會自動執行 `--cal`，無需手動分兩步
 - 一旦標記為術語（`is_term=true` 或 `status=approved`），後續 `--cal` 會跳過全文搜尋
 - 寫入 `glossary.json` 時，術語 key 會自動正規化為單數（例如輸入 `Aspects` 會儲存為 `Aspect`）
 

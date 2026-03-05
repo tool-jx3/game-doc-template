@@ -97,7 +97,6 @@ uv run python scripts/term_generate.py --min-frequency 2
 3. Update glossary safely:
 
 ```bash
-uv run python scripts/term_edit.py --term "<TERM>" --cal
 uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term
 uv run python scripts/validate_glossary.py
 uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden

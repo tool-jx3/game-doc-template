@@ -78,8 +78,8 @@ glossary.json: ${glossary_stats}
 
 Scripts (run from project root):
 - Generate term candidates : uv run python scripts/term_generate.py --min-frequency 2
-- Calculate evidence        : uv run python scripts/term_edit.py --term "<TERM>" --cal
-- Approve / update term     : uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term
+- Calculate evidence (standalone) : uv run python scripts/term_edit.py --term "<TERM>" --cal
+- Approve / update term (auto-cal): uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term
 - Read consistency report   : uv run python scripts/term_read.py
 
 Rules: always run term_read.py before translating; approve new terms before use.

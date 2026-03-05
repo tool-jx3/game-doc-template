@@ -102,8 +102,8 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 ### Terminology Scripts
 
 - Generate candidates: `uv run python scripts/term_generate.py --min-frequency 2`
-- Calculate evidence before editing unmanaged term: `uv run python scripts/term_edit.py --term "<TERM>" --cal`
-- Approve/update term: `uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term`
+- Calculate evidence (standalone): `uv run python scripts/term_edit.py --term "<TERM>" --cal`
+- Approve/update term (auto-runs `--cal` for unmanaged terms): `uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH>" --status approved --mark-term`
 - Read consistency report: `uv run python scripts/term_read.py`
 - Validate glossary schema: `uv run python scripts/validate_glossary.py`
 
