@@ -18,12 +18,27 @@ Pipeline: `translator -> reviewer -> refiner` (max 2 iterations).
 
 ### Step 1: Resolve Scope and Preconditions
 
-1. Load targets from `$ARGUMENTS` or ask user in Traditional Chinese.
-2. Verify required files:
-- `data/translation-progress.json`
-- `glossary.json`
-- `style-decisions.json`
-3. If missing, stop and ask user to initialize first.
+1. Verify required files exist:
+   - `data/translation-progress.json`
+   - `glossary.json`
+   - `style-decisions.json`
+   If any are missing, stop and ask user to initialize first.
+
+2. Resolve target files:
+   - If `$ARGUMENTS` specifies concrete file paths or a scoped pattern → use those directly.
+   - Otherwise (no args, `all`, or `next`) → **auto-select from `translation-progress.json`**:
+     1. **Resume first**: collect all files with status `in_progress` (highest priority).
+     2. **Then queue**: collect files with status `not_started`, in chapter order.
+     3. Default batch size is 3 files. Display selected files in Traditional Chinese before proceeding:
+        ```
+        翻譯進度：已完成 X / Y 個章節
+        本批次自動選取以下 N 個檔案：
+        - [in_progress 繼續] <file>
+        - [not_started 新增] <file>
+        …
+        是否繼續？或請指定其他範圍。
+        ```
+     4. Wait for user confirmation or override.
 
 ### Step 2: Create TodoWrite Before Dispatch
 
@@ -58,13 +73,28 @@ mkdir -p .claude/skills/super-translate/.state/drafts
 
 ### Step 6: Execute Per Batch (Default First 3 Files)
 
+**Pre-read shared context once per batch (before the file loop):**
+
+Read and hold in memory:
+- `GLOSSARY_CONTENT` = full content of `glossary.json`
+- `STYLE_CONTENT` = full content of `style-decisions.json`
+
 For each target file:
 1. mark TodoWrite item `in_progress`
 2. update `translation-progress.json` status to `in_progress`
-3. dispatch translator using `./translator-prompt.md` to produce draft only (do not overwrite source)
-4. dispatch reviewer using `./reviewer-prompt.md` (combined source fidelity + quality check)
-5. if fail -> dispatch refiner using `./refiner-prompt.md` -> re-run reviewer
-6. cap at 2 iterations total
+3. Read `SOURCE_CONTENT` = full content of `<TARGET_FILE>`
+4. dispatch translator using `./translator-prompt.md`, inline:
+   - `<SOURCE_CONTENT>` = content of target file
+   - `<GLOSSARY_CONTENT>` = glossary.json content
+   - `<STYLE_CONTENT>` = style-decisions.json content
+   - `<DRAFT_FILE>` = draft output path
+5. After translator returns, read `DRAFT_CONTENT` = full content of `<DRAFT_FILE>`
+6. dispatch reviewer using `./reviewer-prompt.md`, inline:
+   - `<SOURCE_CONTENT>`, `<DRAFT_CONTENT>`, `<GLOSSARY_CONTENT>`, `<STYLE_CONTENT>`
+7. if fail → dispatch refiner using `./refiner-prompt.md`, inline:
+   - `<SOURCE_CONTENT>`, `<DRAFT_CONTENT>`, `<REVIEW_JSON>`, `<GLOSSARY_CONTENT>`, `<STYLE_CONTENT>`
+   → re-read `DRAFT_CONTENT` from updated draft → re-run reviewer (inline same context)
+8. cap at 2 iterations total
 
 If 2 iterations still have critical issues, ask user in Traditional Chinese:
 - **保留目前草稿，不覆蓋原始檔，稍後手動修正後再續跑**
@@ -84,7 +114,10 @@ Then rerun the file loop.
 
 Only if reviewer passes:
 - replace source with draft
-- update `translation-progress.json` status to `completed`, recalculate `_meta.completed`
+- **Immediately** update `translation-progress.json`:
+  - Set file status to `completed`
+  - Recalculate `_meta.completed` (count of completed entries)
+  - Update `_meta.updated` to current timestamp
 - close TodoWrite file item
 
 If blocked/failed:
@@ -97,8 +130,11 @@ If blocked/failed:
 After each batch:
 - report completed/blocked/failed files
 - report iteration counts
+- report updated progress: `已完成 X / Y 個章節`
 - confirm TodoWrite + progress tracker sync
-- ask whether to continue next batch
+- if remaining `not_started` or `in_progress` files exist: ask user whether to continue with next batch
+  - if yes: re-run Step 1 auto-select (resume `in_progress` first, then next `not_started` files in chapter order) → return to Step 6
+  - if no: proceed to Step 9 Final Verification
 
 ### Step 9: Final Verification
 
@@ -119,7 +155,7 @@ Prompt templates are colocated with this skill:
 
 ## Dispatch Templates
 
-Use these fixed dispatch patterns:
+All context is inlined by the orchestrator before dispatch. Subagents must not read any files themselves.
 
 ### translator
 
@@ -128,7 +164,11 @@ Task tool (general-purpose):
   description: "Translate draft for <TARGET_FILE>"
   prompt template: ./translator-prompt.md
   placeholders:
-    <TARGET_FILE>, <DRAFT_FILE>
+    <TARGET_FILE>        path string
+    <SOURCE_CONTENT>     inlined file content
+    <DRAFT_FILE>         draft output path
+    <GLOSSARY_CONTENT>   inlined glossary.json content
+    <STYLE_CONTENT>      inlined style-decisions.json content
 ```
 
 ### reviewer
@@ -138,7 +178,12 @@ Task tool (general-purpose):
   description: "Review translation for <TARGET_FILE>"
   prompt template: ./reviewer-prompt.md
   placeholders:
-    <TARGET_FILE>, <DRAFT_FILE>
+    <TARGET_FILE>        path string
+    <SOURCE_CONTENT>     inlined source file content
+    <DRAFT_FILE>         draft file path
+    <DRAFT_CONTENT>      inlined draft file content (read after translator finishes)
+    <GLOSSARY_CONTENT>   inlined glossary.json content
+    <STYLE_CONTENT>      inlined style-decisions.json content
 ```
 
 ### refiner
@@ -148,39 +193,66 @@ Task tool (general-purpose):
   description: "Refine draft for <TARGET_FILE>"
   prompt template: ./refiner-prompt.md
   placeholders:
-    <TARGET_FILE>, <DRAFT_FILE>, <REVIEW_JSON>
+    <TARGET_FILE>        path string
+    <SOURCE_CONTENT>     inlined source file content
+    <DRAFT_FILE>         draft file path
+    <DRAFT_CONTENT>      inlined current draft content (re-read after each iteration)
+    <REVIEW_JSON>        reviewer output JSON
+    <GLOSSARY_CONTENT>   inlined glossary.json content
+    <STYLE_CONTENT>      inlined style-decisions.json content
 ```
 
 ## Example Workflow
 
-```text
-You: Start /super-translate for rules/combat.md and rules/equipment.md
+### Auto-select (no args)
 
-[Step 1] Load scope and verify files
-[Step 2] Create TodoWrite for both targets + batch checkpoint
-[Step 3] Run terminology preflight
-[Step 4] Resolve translation mode
-[Step 5] Prepare draft directory
+```text
+You: /super-translate
+
+[Step 1] Verify files → auto-select from progress tracker:
+  翻譯進度：已完成 0 / 10 個章節
+  本批次自動選取以下 3 個檔案：
+  - [not_started 新增] rules/intro.md
+  - [not_started 新增] rules/combat.md
+  - [not_started 新增] rules/equipment.md
+  是否繼續？
+
+[Steps 2-5] Setup: TodoWrite, terminology preflight, mode, draft dir
+
+Batch 1: rules/intro.md
+  - translator -> draft generated
+  - reviewer -> pass
+  - writeback + update translation-progress (completed=1) + TodoWrite
 
 Batch 1: rules/combat.md
-  - translator -> draft file generated
-  - reviewer -> found 1 critical issue
-  - refiner -> fixed issue
+  - translator -> draft generated
+  - reviewer -> 1 critical issue
+  - refiner -> fixed
   - reviewer -> pass
-  - writeback + update translation-progress + TodoWrite
+  - writeback + update translation-progress (completed=2) + TodoWrite
 
 Batch 1: rules/equipment.md
-  - translator -> draft file generated
+  - translator -> draft generated
   - reviewer -> pass
-  - writeback + update translation-progress + TodoWrite
+  - writeback + update translation-progress (completed=3) + TodoWrite
 
-[Batch checkpoint report]
-  - completed: 2, blocked: 0
-  - ask user: continue next batch?
+[Step 8 Batch checkpoint]
+  - 已完成 3 / 10 個章節
+  - completed: 3, blocked: 0
+  - 是否繼續下一批？
 
-[Final verification]
-  - validate_glossary + term_read
-  - run check-consistency
+User: 繼續
+
+[Step 1 re-run] auto-select next 3 not_started files → Batch 2...
+```
+
+### Explicit target
+
+```text
+You: /super-translate rules/combat.md rules/equipment.md
+
+[Step 1] Use specified files directly (skip auto-select)
+...
 ```
 
 ## Common Mistakes

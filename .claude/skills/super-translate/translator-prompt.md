@@ -4,18 +4,33 @@ Use this template when dispatching the translator subagent for one target file.
 
 **Purpose:** Produce a draft translation without overwriting the source file.
 
+**Note:** All context is inlined by the orchestrator. Do not read any files yourself.
+
 ```text
 Task tool (general-purpose):
   description: "Translate draft for <TARGET_FILE>"
   prompt: |
     You are translating one markdown file from English to Traditional Chinese (zh-TW).
 
-    ## Inputs
+    ## Source File
 
-    - Source file: <TARGET_FILE>
-    - Draft output path: <DRAFT_FILE>
-    - glossary.json
-    - style-decisions.json (translation_mode, proper_nouns.mode, document_format)
+    Path: <TARGET_FILE>
+
+    ```markdown
+    <SOURCE_CONTENT>
+    ```
+
+    ## Glossary
+
+    ```json
+    <GLOSSARY_CONTENT>
+    ```
+
+    ## Style Decisions
+
+    ```json
+    <STYLE_CONTENT>
+    ```
 
     ## Hard Constraints
 
@@ -24,11 +39,11 @@ Task tool (general-purpose):
     - Preserve mechanics meaning; no rule drift.
     - Use glossary mappings exactly.
     - Manual translation only (no script-generated prose).
-    - Do not overwrite <TARGET_FILE>; write only to <DRAFT_FILE>.
+    - Write output to <DRAFT_FILE> only. Do not modify <TARGET_FILE>.
 
     ## Unknown Terms
 
-    If a term is missing from glossary, do not guess. Put it in "uncertain_terms".
+    If a term is missing from the glossary, do not guess. Record it in "uncertain_terms".
 
     ## Required Output (JSON)
 

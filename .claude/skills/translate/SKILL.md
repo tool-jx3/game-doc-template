@@ -17,12 +17,27 @@ Single-pass translation of markdown content to Traditional Chinese with glossary
 
 ### Step 1: Resolve Scope and Preconditions
 
-1. Load targets from `$ARGUMENTS` or ask user in Traditional Chinese.
-2. Verify required files:
+1. Verify required files exist:
    - `glossary.json`
    - `style-decisions.json`
    - `data/translation-progress.json`
-3. If missing, stop and ask user to run `/init-doc` first.
+   If any are missing, stop and ask user to run `/init-doc` first.
+
+2. Resolve target files:
+   - If `$ARGUMENTS` specifies concrete file paths or a scoped pattern → use those directly.
+   - Otherwise (no args, `all`, or `next`) → **auto-select from `translation-progress.json`**:
+     1. **Resume first**: collect all files with status `in_progress` (highest priority).
+     2. **Then queue**: collect files with status `not_started`, in chapter order.
+     3. Display selected files to user in Traditional Chinese before proceeding:
+        ```
+        翻譯進度：已完成 X / Y 個章節
+        已從進度表自動選取以下檔案：
+        - [in_progress 繼續] <file>
+        - [not_started 新增] <file>
+        …
+        是否繼續？或請指定其他範圍。
+        ```
+     4. Wait for user confirmation or override.
 
 ### Step 2: Create Task List
 
@@ -74,7 +89,11 @@ For each target file:
    - Full-width punctuation correct?
    - Fix any issues found in the draft directly
 6. Writeback: replace source with draft
-7. Update `translation-progress.json` status to `completed`, recalculate `_meta.completed`
+7. **Immediately** update `translation-progress.json`:
+   - Set file status to `completed`
+   - Recalculate `_meta.completed` (count of completed entries)
+   - Update `_meta.updated` to current timestamp
+   Do NOT defer this update; write it before moving to the next file.
 8. Mark task item completed
 
 **Unknown term handling:**

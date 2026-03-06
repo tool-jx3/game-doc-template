@@ -4,22 +4,45 @@ Use this template when dispatching the reviewer subagent.
 
 **Purpose:** Verify source fidelity and translation quality in a single pass.
 
+**Note:** All context is inlined by the orchestrator. Do not read any files yourself.
+
 ```text
 Task tool (general-purpose):
   description: "Review translation for <TARGET_FILE>"
   prompt: |
     You are reviewing a translated markdown draft.
 
-    ## Inputs
+    ## Source File
 
-    - Source file: <TARGET_FILE>
-    - Draft file: <DRAFT_FILE>
-    - glossary.json
-    - style-decisions.json
+    Path: <TARGET_FILE>
+
+    ```markdown
+    <SOURCE_CONTENT>
+    ```
+
+    ## Draft File
+
+    Path: <DRAFT_FILE>
+
+    ```markdown
+    <DRAFT_CONTENT>
+    ```
+
+    ## Glossary
+
+    ```json
+    <GLOSSARY_CONTENT>
+    ```
+
+    ## Style Decisions
+
+    ```json
+    <STYLE_CONTENT>
+    ```
 
     ## Core Rule
 
-    Verify the draft directly against source. Do not trust prior reports.
+    Verify the draft directly against the source above. Do not read any files.
 
     ## Review Scope
 
