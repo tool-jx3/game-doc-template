@@ -32,6 +32,15 @@ Run:
 uv run python scripts/term_generate.py --min-frequency 2
 ```
 
+Then **immediately** pre-calculate evidence for all candidates in one pass:
+
+```bash
+uv run python scripts/term_cal_batch.py
+```
+
+This scans the corpus once and caches counts + context for every candidate.
+Subsequent `term_edit.py` calls hit the cache; no re-scanning needed.
+
 Classify each candidate as:
 - managed game term
 - normal prose (not managed)
@@ -40,17 +49,19 @@ If `proper_nouns.mode != keep_original`, repeated proper nouns (`>=2`) must be m
 
 ### Step 3: Edit Glossary Safely
 
-For unmanaged terms, `--cal` is auto-run when editing:
+For unmanaged terms, evidence is read from cache (populated by `term_cal_batch.py`):
 
 ```bash
 uv run python scripts/term_edit.py --term "<TERM>" --set-zh "<ZH_TERM>" --status approved --mark-term
 ```
 
-To run `--cal` standalone (inspect evidence without editing):
+To inspect evidence for a single term without editing:
 
 ```bash
 uv run python scripts/term_edit.py --term "<TERM>" --cal
 ```
+
+If the corpus changed since the last batch run, re-run `term_cal_batch.py` to refresh the cache.
 
 ### Step 4: Validate Usage Across Docs
 
