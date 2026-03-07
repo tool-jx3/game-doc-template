@@ -12,6 +12,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MARKDOWN_DIR = PROJECT_ROOT / "data" / "markdown"
 DOCS_CONTENT_DIR = PROJECT_ROOT / "docs" / "src" / "content" / "docs"
 GLOSSARY_PATH = PROJECT_ROOT / "glossary.json"
+SAMPLE_IMAGES = [
+    PROJECT_ROOT / "docs" / "public" / "bg.jpg",
+    PROJECT_ROOT / "docs" / "public" / "og-image.jpg",
+    PROJECT_ROOT / "docs" / "src" / "assets" / "hero.jpg",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,6 +69,12 @@ def clean_docs_content(apply: bool) -> None:
                 path.rmdir()
 
 
+def clean_sample_images(apply: bool) -> None:
+    for path in SAMPLE_IMAGES:
+        if path.exists():
+            remove_path(path, apply)
+
+
 def clean_glossary(apply: bool) -> None:
     if not GLOSSARY_PATH.exists():
         return
@@ -103,9 +114,12 @@ def main() -> None:
     print(f"- {MARKDOWN_DIR.relative_to(PROJECT_ROOT)}")
     print(f"- {DOCS_CONTENT_DIR.relative_to(PROJECT_ROOT)}")
     print(f"- {GLOSSARY_PATH.relative_to(PROJECT_ROOT)}")
+    for img in SAMPLE_IMAGES:
+        print(f"- {img.relative_to(PROJECT_ROOT)}")
 
     clean_markdown_data(apply)
     clean_docs_content(apply)
+    clean_sample_images(apply)
     clean_glossary(apply)
 
     if apply:
