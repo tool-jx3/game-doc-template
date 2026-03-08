@@ -67,9 +67,13 @@ Persist mode before translating.
 
 ### Step 5: Prepare Draft Directory
 
+For each target file, obtain its draft path (this also creates the directory):
+
 ```bash
-mkdir -p .claude/skills/translate/.state/drafts
+uv run python scripts/draft.py path <TARGET_FILE>
 ```
+
+Use the printed path as `<DRAFT_FILE>` for that file.
 
 ### Step 6: Translate Per File
 
@@ -78,7 +82,12 @@ For each target file:
 1. Mark task item `in_progress`
 2. Update `translation-progress.json` status to `in_progress`
 3. Read source content, `glossary.json`, and `style-decisions.json`
-4. Translate to draft file (`.claude/skills/translate/.state/drafts/<filename>`)
+4. Get draft path:
+   ```bash
+   DRAFT_FILE=$(uv run python scripts/draft.py path <TARGET_FILE>)
+   ```
+   Translate to `$DRAFT_FILE`:
+   - Preserve the `_draft_source` field already in the stub frontmatter; do not remove it
    - Traditional Chinese only (Taiwan usage), no Simplified Chinese
    - Preserve markdown structure exactly (frontmatter, headings, lists, tables, links, code blocks)
    - Treat `frontmatter.title` as the page title; do not restate it anywhere in the body as a heading of any level (`#`, `##`, etc.)
@@ -86,7 +95,7 @@ For each target file:
    - Preserve image links exactly; if an image link appears within the source flow for a paragraph, keep the same link but place it near the middle of the translated paragraph instead of splitting the paragraph into separate blocks
    - Use glossary mappings exactly
    - Manual translation only (no script-generated prose)
-   - Do NOT overwrite source file; write only to draft path
+   - Do NOT overwrite source file; write only to `$DRAFT_FILE`
 5. Self-review the draft against source:
    - Missing or truncated content?
    - Glossary violations?
@@ -96,7 +105,10 @@ For each target file:
    - Image links preserved and kept inside the paragraph flow without splitting the paragraph?
    - Full-width punctuation correct?
    - Fix any issues found in the draft directly
-6. Writeback: replace source with draft
+6. Writeback:
+   ```bash
+   uv run python scripts/draft.py writeback <TARGET_FILE>
+   ```
 7. **Immediately** update `translation-progress.json`:
    - Set file status to `completed`
    - Recalculate `_meta.completed` (count of completed entries)

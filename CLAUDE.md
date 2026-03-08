@@ -100,6 +100,12 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 | `style-decisions.json`                           | Style decision records                             |
 | `.claude/skills/terminology-management/SKILL.md` | Terminology interaction skill (edit/generate/read) |
 
+### Draft Scripts
+
+- Get draft path (creates dir): `uv run python scripts/draft.py [--skill translate|super-translate] path <source>`
+- Write back draft to source: `uv run python scripts/draft.py [--skill translate|super-translate] writeback <source>`
+- Clean all drafts for skill: `uv run python scripts/draft.py [--skill translate|super-translate] clean`
+
 ### Terminology Scripts
 
 - Generate candidates: `uv run python scripts/term_generate.py --min-frequency 2`

@@ -65,11 +65,15 @@ If missing, ask user in Traditional Chinese:
 
 Persist mode before dispatch.
 
-### Step 5: Prepare Draft Directory
+### Step 5: Prepare Draft Paths
+
+For each target file, obtain its draft path (this also creates the directory):
 
 ```bash
-mkdir -p .claude/skills/super-translate/.state/drafts
+uv run python scripts/draft.py --skill super-translate path <TARGET_FILE>
 ```
+
+Use the printed path as `<DRAFT_FILE>` for that file.
 
 ### Step 6: Execute Per Batch (Default First 3 Files)
 
@@ -83,11 +87,16 @@ For each target file:
 1. mark TodoWrite item `in_progress`
 2. update `translation-progress.json` status to `in_progress`
 3. Read `SOURCE_CONTENT` = full content of `<TARGET_FILE>`
-4. dispatch translator using `./translator-prompt.md`, inline:
+4. Resolve `<DRAFT_FILE>`:
+   ```bash
+   DRAFT_FILE=$(uv run python scripts/draft.py --skill super-translate path <TARGET_FILE>)
+   ```
+5. dispatch translator using `./translator-prompt.md`, inline:
    - `<SOURCE_CONTENT>` = content of target file
    - `<GLOSSARY_CONTENT>` = glossary.json content
    - `<STYLE_CONTENT>` = style-decisions.json content
-   - `<DRAFT_FILE>` = draft output path
+   - `<DRAFT_FILE>` = `$DRAFT_FILE` (from above)
+   - The stub draft already contains `_draft_source` in its frontmatter; translator must preserve it in the output
    - `frontmatter.title` is the page title; translator must not restate it anywhere in the body as a heading of any level (`#`, `##`, etc.)
    - If the opening overview/introduction block has no heading in the source, translator must keep it as plain body content and must not invent a `概覽` heading
    - If source content contains image markdown in the middle of prose flow, preserve the exact image link and move it into the middle of the translated paragraph without splitting that paragraph into separate blocks
@@ -120,7 +129,9 @@ Then rerun the file loop.
 ### Step 7: Controlled Writeback
 
 Only if reviewer passes:
-- replace source with draft
+- ```bash
+  uv run python scripts/draft.py --skill super-translate writeback <TARGET_FILE>
+  ```
 - **Immediately** update `translation-progress.json`:
   - Set file status to `completed`
   - Recalculate `_meta.completed` (count of completed entries)
