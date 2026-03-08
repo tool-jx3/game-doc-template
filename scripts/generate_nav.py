@@ -45,13 +45,19 @@ def generate_index(chapters: dict, style: dict) -> str:
     first_title = sections[0][1]["title"] if sections else "開始閱讀"
     second_title = sections[1][1]["title"] if len(sections) > 1 else ""
 
+    site = style.get("site", {})
+    title = site.get("title", "遊戲規則文件")
+    description = site.get("description", "遊戲規則文件首頁")
+    tagline = site.get("tagline", "快速查閱核心規則、角色、裝備與主持指南")
+    intro = site.get("intro", "本站整理遊戲規則的主要章節，提供易讀、可搜尋的文件版本，方便跑團前準備與遊戲中快速查表。")
+
     lines = [
         "---",
-        "title: 遊戲規則文件",
-        "description: 遊戲規則文件首頁",
+        f"title: {title}",
+        f"description: {description}",
         "template: splash",
         "hero:",
-        "  tagline: 快速查閱核心規則、角色、裝備與主持指南",
+        f"  tagline: {tagline}",
         "  image:",
         "    file: ../../assets/hero.jpg",
         "  actions:",
@@ -75,7 +81,7 @@ def generate_index(chapters: dict, style: dict) -> str:
         "",
         "## 內容簡介",
         "",
-        "本站整理遊戲規則的主要章節，提供易讀、可搜尋的文件版本，方便跑團前準備與遊戲中快速查表。",
+        intro,
         "",
         "## 快速導航",
         "",

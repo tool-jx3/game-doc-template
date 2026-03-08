@@ -101,11 +101,30 @@ Persist to `style-decisions.json.document_format`.
 4. Ask theme decisions in Traditional Chinese (mode/overlay/palette).
 5. Update `docs/src/styles/custom.css` and persist style decisions.
 6. Persist image retention decision to `style-decisions.json.images.preserve_images`.
-7. Ask for copyright and credits in Traditional Chinese:
+7. Ask for site meta in Traditional Chinese (all four fields):
+   - **網站標題**（`site.title`）：首頁 `<title>` 及 frontmatter title，例：「Rapscallion 遊戲規則」
+   - **首頁描述**（`site.description`）：SEO description，一句話
+   - **副標語**（`site.tagline`）：hero 區塊顯示的一行短語
+   - **內容簡介**（`site.intro`）：首頁「內容簡介」段落，一到兩句
+
+   Persist to `style-decisions.json`:
+
+   ```json
+   {
+     "site": {
+       "title": "<USER_INPUT>",
+       "description": "<USER_INPUT>",
+       "tagline": "<USER_INPUT>",
+       "intro": "<USER_INPUT>"
+     }
+   }
+   ```
+
+9. Ask for copyright and credits in Traditional Chinese:
    - Copyright notice text（例：`© 2024 Author Name. All rights reserved.`）
    - Credits entries as role → name pairs（例：原作者、翻譯、美術設計等）
    - Whether to show each section on the homepage
-8. Persist to `style-decisions.json`:
+10. Persist to `style-decisions.json`:
 
 ```json
 {
