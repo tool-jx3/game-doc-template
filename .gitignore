@@ -48,3 +48,6 @@ npm-debug.log*
 
 # Drafts
 .state/
+
+# Temporary work area
+tmp/
