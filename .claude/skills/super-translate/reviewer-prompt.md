@@ -50,13 +50,15 @@ Task tool (general-purpose):
     1. Missing or truncated content
     2. Meaning drift in mechanics/rules
     3. Glossary violations and forbidden variants
+    4. Content contamination — content that belongs to another page or section must not appear in this draft; flag any paragraph or block that has no corresponding source in `<SOURCE_CONTENT>`
+    5. Untranslated English — every English word in the draft that is not a proper code/notation/dice expression (e.g. `1d6`, `+2`) must be translated; terminology must follow `<GLOSSARY_CONTENT>`; proper nouns must follow the policy in `<STYLE_CONTENT>` (if `proper_nouns.mode == keep_original`, untranslated proper nouns are allowed)
 
     Quality:
-    4. zh-TW readability and tone
-    5. Full-width punctuation correctness
-    6. Heading/frontmatter/table/dice format integrity
-    7. No added heading of any level that restates `frontmatter.title`, and no invented overview heading when the source has no such heading
-    8. Image links are preserved exactly and, when they belong to a paragraph flow, remain inside one paragraph instead of splitting it into separate blocks
+    6. zh-TW readability and tone
+    7. Full-width punctuation correctness
+    8. Heading/frontmatter/table/dice format integrity
+    9. No added heading of any level that restates `frontmatter.title`, and no invented overview heading when the source has no such heading
+    10. Image links are preserved exactly and, when they belong to a paragraph flow, remain inside one paragraph instead of splitting it into separate blocks
 
     ## Output JSON Only
 
