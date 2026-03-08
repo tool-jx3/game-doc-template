@@ -169,7 +169,14 @@ class TestExtractPdf(unittest.TestCase):
                 self.width = width
                 self.height = height
 
+        class FakePageRect:
+            def __init__(self, width: float, height: float) -> None:
+                self.width = width
+                self.height = height
+
         class FakePage:
+            rect = FakePageRect(100, 200)
+
             def get_images(self, full: bool = False) -> list[tuple[int]]:
                 return [(1,), (2,)]
 
@@ -190,7 +197,25 @@ class TestExtractPdf(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as td:
             out = Path(td)
-            with patch.object(ep, "pymupdf", FakePyMuPDF):
+            with (
+                patch.object(ep, "pymupdf", FakePyMuPDF),
+                patch.object(
+                    ep,
+                    "analyze_image_bytes",
+                    side_effect=[
+                        {
+                            "visual_hash": "1111",
+                            "dominant_color_ratio": 0.91,
+                            "sampled_pixel_count": 64,
+                        },
+                        {
+                            "visual_hash": "2222",
+                            "dominant_color_ratio": 0.34,
+                            "sampled_pixel_count": 64,
+                        },
+                    ],
+                ),
+            ):
                 images = ep.extract_images(Path("sample.pdf"), out)
             self.assertEqual(len(images), 2)
             manifest = json.loads(
@@ -200,6 +225,8 @@ class TestExtractPdf(unittest.TestCase):
             self.assertEqual(manifest["images"][0]["page"], 1)
             self.assertEqual(manifest["images"][0]["x"], 10)
             self.assertEqual(manifest["images"][0]["file_size"], 4)
+            self.assertEqual(manifest["images"][0]["visual_hash"], "1111")
+            self.assertEqual(manifest["images"][0]["coverage_ratio"], 0.06)
             self.assertTrue(
                 (out / "images" / "sample" / manifest["images"][0]["filename"]).exists()
             )
@@ -255,7 +282,7 @@ class TestSplitChapters(unittest.TestCase):
             src = root / "data" / "markdown" / "book_pages.md"
             src.parent.mkdir(parents=True)
             src.write_text(
-                "<!-- PAGE 1 -->\n\nHello\n\n<!-- PAGE 2 -->\n\nWorld",
+                "<!-- PAGE 1 -->\n\n" + ("Hello world " * 60) + "\n\n<!-- PAGE 2 -->\n\n" + ("World text " * 60) + "\n\n<!-- PAGE 3 -->\n\n" + ("Background page " * 60),
                 encoding="utf-8",
             )
 
@@ -294,6 +321,7 @@ class TestSplitChapters(unittest.TestCase):
                         "y": 0,
                         "width": 800,
                         "height": 1000,
+                        "coverage_ratio": 0.92,
                         "file_size": len(b"same-size"),
                     },
                     {
@@ -304,6 +332,7 @@ class TestSplitChapters(unittest.TestCase):
                         "y": 0,
                         "width": 800,
                         "height": 1000,
+                        "coverage_ratio": 0.92,
                         "file_size": len(b"same-size"),
                     },
                     {
@@ -314,6 +343,7 @@ class TestSplitChapters(unittest.TestCase):
                         "y": 0,
                         "width": 800,
                         "height": 1000,
+                        "coverage_ratio": 0.92,
                         "file_size": len(b"same-size"),
                     },
                 ],
@@ -356,6 +386,344 @@ class TestSplitChapters(unittest.TestCase):
             self.assertTrue(asset.exists())
             self.assertIn(f"../../assets/extracted/book/{unique_name}", data)
             self.assertNotIn(repeated_backgrounds[0], data)
+
+    def test_split_chapters_supports_nested_file_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            src = root / "data" / "markdown" / "book_pages.md"
+            src.parent.mkdir(parents=True)
+            src.write_text(
+                "<!-- PAGE 1 -->\n\nIntro\n\n<!-- PAGE 2 -->\n\nDamage rules",
+                encoding="utf-8",
+            )
+            config = {
+                "source": "data/markdown/book_pages.md",
+                "output_dir": "docs/src/content/docs",
+                "chapters": {
+                    "rules": {
+                        "title": "Rules",
+                        "order": 1,
+                        "files": {
+                            "combat/damage": {
+                                "title": "Damage",
+                                "description": "Combat damage rules",
+                                "pages": [2, 2],
+                                "order": 1,
+                            }
+                        },
+                    }
+                },
+            }
+
+            sc.split_chapters(config, root)
+
+            out = root / "docs" / "src" / "content" / "docs" / "rules" / "combat" / "damage.md"
+            self.assertTrue(out.exists())
+            data = out.read_text(encoding="utf-8")
+            self.assertIn("title: Damage", data)
+            self.assertIn("Damage rules", data)
+
+    def test_split_chapters_skips_repeated_visual_backgrounds(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            src = root / "data" / "markdown" / "book_pages.md"
+            src.parent.mkdir(parents=True)
+            src.write_text(
+                "<!-- PAGE 1 -->\n\n" + ("Hello world " * 60) + "\n\n<!-- PAGE 2 -->\n\n" + ("World text " * 60),
+                encoding="utf-8",
+            )
+
+            images_dir = root / "data" / "markdown" / "images" / "book"
+            images_dir.mkdir(parents=True)
+            foreground_name = "page001_img00_occ00_x10_y20_w120_h180.png"
+            background_a = "page001_img01_occ00_x0_y0_w780_h980.png"
+            background_b = "page002_img01_occ00_x0_y0_w720_h960.png"
+            (images_dir / foreground_name).write_bytes(b"unique-image")
+            (images_dir / background_a).write_bytes(b"bg-image-a")
+            (images_dir / background_b).write_bytes(b"bg-image-b-larger")
+
+            manifest = {
+                "pdf": "book.pdf",
+                "images_dir": "images/book",
+                "images": [
+                    {
+                        "page": 1,
+                        "filename": foreground_name,
+                        "path": f"images/book/{foreground_name}",
+                        "x": 10,
+                        "y": 20,
+                        "width": 120,
+                        "height": 180,
+                        "coverage_ratio": 0.08,
+                        "file_size": len(b"unique-image"),
+                        "visual_hash": "fg-1",
+                        "dominant_color_ratio": 0.42,
+                    },
+                    {
+                        "page": 1,
+                        "filename": background_a,
+                        "path": f"images/book/{background_a}",
+                        "x": 0,
+                        "y": 0,
+                        "width": 780,
+                        "height": 980,
+                        "coverage_ratio": 0.92,
+                        "file_size": len(b"bg-image-a"),
+                        "visual_hash": "bg-repeat",
+                        "dominant_color_ratio": 0.51,
+                    },
+                    {
+                        "page": 2,
+                        "filename": background_b,
+                        "path": f"images/book/{background_b}",
+                        "x": 0,
+                        "y": 0,
+                        "width": 720,
+                        "height": 960,
+                        "coverage_ratio": 0.88,
+                        "file_size": len(b"bg-image-b-larger"),
+                        "visual_hash": "bg-repeat",
+                        "dominant_color_ratio": 0.49,
+                    },
+                ],
+            }
+            (images_dir / "manifest.json").write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            config = {
+                "source": "data/markdown/book_pages.md",
+                "output_dir": "docs/src/content/docs",
+                "images": {
+                    "enabled": True,
+                    "assets_dir": "docs/src/assets/extracted",
+                    "repeat_file_size_threshold": 99,
+                    "repeat_visual_threshold": 2,
+                    "background_min_coverage_ratio": 0.6,
+                },
+                "chapters": {
+                    "rules": {
+                        "title": "Rules",
+                        "order": 1,
+                        "files": {
+                            "index": {
+                                "title": "Overview",
+                                "description": "Desc",
+                                "pages": [1, 2],
+                                "order": 0,
+                            }
+                        },
+                    }
+                },
+            }
+
+            sc.split_chapters(config, root)
+
+            out = root / "docs" / "src" / "content" / "docs" / "rules" / "index.md"
+            data = out.read_text(encoding="utf-8")
+
+            self.assertIn(f"../../assets/extracted/book/{foreground_name}", data)
+            self.assertNotIn(background_a, data)
+            self.assertNotIn(background_b, data)
+
+    def test_split_chapters_keeps_full_page_image_when_page_text_is_sparse(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            src = root / "data" / "markdown" / "book_pages.md"
+            src.parent.mkdir(parents=True)
+            src.write_text(
+                "<!-- PAGE 1 -->\n\nIllustration caption only",
+                encoding="utf-8",
+            )
+
+            images_dir = root / "data" / "markdown" / "images" / "book"
+            images_dir.mkdir(parents=True)
+            art_name = "page001_img00_occ00_x0_y0_w800_h1000.png"
+            (images_dir / art_name).write_bytes(b"art-image")
+
+            manifest = {
+                "pdf": "book.pdf",
+                "images_dir": "images/book",
+                "images": [
+                    {
+                        "page": 1,
+                        "filename": art_name,
+                        "path": f"images/book/{art_name}",
+                        "x": 0,
+                        "y": 0,
+                        "width": 800,
+                        "height": 1000,
+                        "coverage_ratio": 0.92,
+                        "file_size": len(b"art-image"),
+                        "visual_hash": "full-art",
+                        "dominant_color_ratio": 0.95,
+                    },
+                    {
+                        "page": 2,
+                        "filename": "page002_img00_occ00_x0_y0_w800_h1000.png",
+                        "path": "images/book/page002_img00_occ00_x0_y0_w800_h1000.png",
+                        "x": 0,
+                        "y": 0,
+                        "width": 800,
+                        "height": 1000,
+                        "coverage_ratio": 0.92,
+                        "file_size": len(b"art-image"),
+                        "visual_hash": "full-art",
+                        "dominant_color_ratio": 0.95,
+                    },
+                ],
+            }
+            (images_dir / "page002_img00_occ00_x0_y0_w800_h1000.png").write_bytes(b"art-image")
+            (images_dir / "manifest.json").write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            config = {
+                "source": "data/markdown/book_pages.md",
+                "output_dir": "docs/src/content/docs",
+                "images": {
+                    "enabled": True,
+                    "assets_dir": "docs/src/assets/extracted",
+                    "repeat_file_size_threshold": 2,
+                    "repeat_visual_threshold": 2,
+                    "background_min_coverage_ratio": 0.6,
+                    "background_min_text_tokens": 80,
+                },
+                "chapters": {
+                    "rules": {
+                        "title": "Rules",
+                        "order": 1,
+                        "files": {
+                            "index": {
+                                "title": "Overview",
+                                "description": "Desc",
+                                "pages": [1, 1],
+                                "order": 0,
+                            }
+                        },
+                    }
+                },
+            }
+
+            sc.split_chapters(config, root)
+
+            out = root / "docs" / "src" / "content" / "docs" / "rules" / "index.md"
+            data = out.read_text(encoding="utf-8")
+            self.assertIn(art_name, data)
+
+    def test_split_chapters_skips_edge_anchored_half_page_backgrounds(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            src = root / "data" / "markdown" / "book_pages.md"
+            src.parent.mkdir(parents=True)
+            src.write_text(
+                "<!-- PAGE 1 -->\n\n" + ("Dense rules text " * 70) + "\n\n<!-- PAGE 2 -->\n\n" + ("Dense rules text " * 70),
+                encoding="utf-8",
+            )
+
+            images_dir = root / "data" / "markdown" / "images" / "book"
+            images_dir.mkdir(parents=True)
+            bg1 = "page001_img00_occ00_x300_y0_w133_h650.jpeg"
+            bg2 = "page002_img00_occ00_x300_y0_w133_h650.jpeg"
+            fg = "page001_img01_occ00_x40_y80_w120_h180.png"
+            (images_dir / bg1).write_bytes(b"edge-bg-a")
+            (images_dir / bg2).write_bytes(b"edge-bg-b")
+            (images_dir / fg).write_bytes(b"foreground")
+
+            manifest = {
+                "pdf": "book.pdf",
+                "images_dir": "images/book",
+                "images": [
+                    {
+                        "page": 1,
+                        "filename": bg1,
+                        "path": f"images/book/{bg1}",
+                        "x": 300,
+                        "y": 0,
+                        "width": 133,
+                        "height": 650,
+                        "page_width": 432,
+                        "page_height": 648,
+                        "coverage_ratio": 0.309,
+                        "file_size": len(b"edge-bg-a"),
+                        "visual_hash": "edge-bg",
+                        "dominant_color_ratio": 0.6,
+                    },
+                    {
+                        "page": 2,
+                        "filename": bg2,
+                        "path": f"images/book/{bg2}",
+                        "x": 300,
+                        "y": 0,
+                        "width": 133,
+                        "height": 650,
+                        "page_width": 432,
+                        "page_height": 648,
+                        "coverage_ratio": 0.309,
+                        "file_size": len(b"edge-bg-b"),
+                        "visual_hash": "edge-bg",
+                        "dominant_color_ratio": 0.58,
+                    },
+                    {
+                        "page": 1,
+                        "filename": fg,
+                        "path": f"images/book/{fg}",
+                        "x": 40,
+                        "y": 80,
+                        "width": 120,
+                        "height": 180,
+                        "page_width": 432,
+                        "page_height": 648,
+                        "coverage_ratio": 0.077,
+                        "file_size": len(b"foreground"),
+                        "visual_hash": "fg",
+                        "dominant_color_ratio": 0.3,
+                    },
+                ],
+            }
+            (images_dir / "manifest.json").write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+            config = {
+                "source": "data/markdown/book_pages.md",
+                "output_dir": "docs/src/content/docs",
+                "images": {
+                    "enabled": True,
+                    "assets_dir": "docs/src/assets/extracted",
+                    "repeat_file_size_threshold": 99,
+                    "repeat_visual_threshold": 2,
+                    "background_min_coverage_ratio": 0.6,
+                    "background_min_text_tokens": 80,
+                    "background_edge_min_area_ratio": 0.18,
+                    "background_edge_min_span_ratio": 0.7,
+                },
+                "chapters": {
+                    "rules": {
+                        "title": "Rules",
+                        "order": 1,
+                        "files": {
+                            "index": {
+                                "title": "Overview",
+                                "description": "Desc",
+                                "pages": [1, 2],
+                                "order": 0,
+                            }
+                        },
+                    }
+                },
+            }
+
+            sc.split_chapters(config, root)
+
+            out = root / "docs" / "src" / "content" / "docs" / "rules" / "index.md"
+            data = out.read_text(encoding="utf-8")
+            self.assertIn(fg, data)
+            self.assertNotIn(bg1, data)
+            self.assertNotIn(bg2, data)
 
 
 class TestTermGenerate(unittest.TestCase):

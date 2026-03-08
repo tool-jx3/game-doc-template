@@ -26,9 +26,9 @@
                     "description": "遊戲規則概述",
                     "pages": [1, 10]
                 },
-                "combat": {
-                    "title": "戰鬥系統",
-                    "description": "戰鬥規則說明",
+                "combat/damage": {
+                    "title": "傷害規則",
+                    "description": "戰鬥章節中的傷害處理",
                     "pages": [11, 30]
                 }
             }
@@ -144,6 +144,11 @@ def clean_content(text: str, patterns: list[str]) -> str:
     return text.strip()
 
 
+def count_page_text_tokens(text: str) -> int:
+    """估算頁面文字量。"""
+    return len(re.findall(r"\S+", text))
+
+
 def generate_frontmatter(title: str, description: str = "", order: int | None = None) -> str:
     """生成 Starlight frontmatter"""
     lines = [
@@ -168,11 +173,21 @@ def infer_source_stem(source_path: Path) -> str:
     return stem
 
 
-def load_image_manifest(config: dict, project_root: Path) -> tuple[list[dict], Path | None, int]:
+def load_image_manifest(config: dict, project_root: Path) -> tuple[list[dict], Path | None, dict]:
     """載入圖片 manifest 與設定。"""
     image_config = config.get("images", {})
+    policy = {
+        "repeat_file_size_threshold": image_config.get("repeat_file_size_threshold", image_config.get("repeat_size_threshold", 5)),
+        "repeat_visual_threshold": image_config.get("repeat_visual_threshold", 3),
+        "background_min_coverage_ratio": image_config.get("background_min_coverage_ratio", 0.6),
+        "background_min_text_tokens": image_config.get("background_min_text_tokens", 80),
+        "background_edge_margin_ratio": image_config.get("background_edge_margin_ratio", 0.08),
+        "background_edge_min_area_ratio": image_config.get("background_edge_min_area_ratio", 0.18),
+        "background_edge_min_span_ratio": image_config.get("background_edge_min_span_ratio", 0.7),
+        "background_dominant_color_ratio_threshold": image_config.get("background_dominant_color_ratio_threshold", 0.85),
+    }
     if image_config.get("enabled", True) is False:
-        return [], None, image_config.get("repeat_file_size_threshold", image_config.get("repeat_size_threshold", 5))
+        return [], None, policy
 
     source_path = Path(config["source"])
     default_manifest = (
@@ -186,13 +201,13 @@ def load_image_manifest(config: dict, project_root: Path) -> tuple[list[dict], P
     manifest_path = project_root / image_config["manifest"] if "manifest" in image_config else default_manifest
 
     if not manifest_path.exists():
-        return [], None, image_config.get("repeat_file_size_threshold", image_config.get("repeat_size_threshold", 5))
+        return [], None, policy
 
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     return (
         payload.get("images", []),
         manifest_path,
-        image_config.get("repeat_file_size_threshold", image_config.get("repeat_size_threshold", 5)),
+        policy,
     )
 
 
@@ -204,22 +219,164 @@ def image_file_size_key(image: dict) -> int | None:
     return int(file_size)
 
 
-def group_images_by_page(images: list[dict], repeat_file_size_threshold: int) -> tuple[dict[int, list[dict]], int]:
-    """依頁碼整理圖片，並略過高重複檔案大小圖片。"""
+def image_visual_key(image: dict) -> str | None:
+    """為圖片建立視覺去重 key。"""
+    visual_hash = image.get("visual_hash")
+    if not visual_hash:
+        return None
+    return str(visual_hash)
+
+
+def image_coverage_ratio(image: dict) -> float | None:
+    """讀取圖片覆蓋頁面的比例。"""
+    ratio = image.get("coverage_ratio")
+    if ratio is None:
+        return None
+    return float(ratio)
+
+
+def image_dominant_color_ratio(image: dict) -> float | None:
+    """讀取圖片單色占比。"""
+    ratio = image.get("dominant_color_ratio")
+    if ratio is None:
+        return None
+    return float(ratio)
+
+
+def image_page_dimensions(image: dict) -> tuple[float, float] | tuple[None, None]:
+    """讀取圖片所屬頁面的寬高。"""
+    page_width = image.get("page_width")
+    page_height = image.get("page_height")
+    if page_width is None or page_height is None:
+        return None, None
+    return float(page_width), float(page_height)
+
+
+def build_page_text_stats(pages: dict[int, str], clean_patterns: list[str]) -> dict[int, dict[str, int]]:
+    """建立每頁文字量統計。"""
+    stats: dict[int, dict[str, int]] = {}
+    for page_num, content in pages.items():
+        cleaned = clean_content(content, clean_patterns)
+        stats[page_num] = {
+            "text_tokens": count_page_text_tokens(cleaned),
+            "char_count": len(cleaned),
+        }
+    return stats
+
+
+def is_background_candidate(
+    image: dict,
+    page_text_stats: dict[int, dict[str, int]],
+    policy: dict,
+) -> bool:
+    """判斷圖片是否符合大面積背景候選條件。"""
+    coverage_ratio = image_coverage_ratio(image)
+    if coverage_ratio is None:
+        return False
+
+    page_stat = page_text_stats.get(int(image["page"]), {})
+    text_tokens = int(page_stat.get("text_tokens", 0))
+    if text_tokens < int(policy.get("background_min_text_tokens", 80) or 0):
+        return False
+
+    if coverage_ratio >= float(policy.get("background_min_coverage_ratio", 0.6)):
+        return True
+
+    page_width, page_height = image_page_dimensions(image)
+    image_width = image.get("width")
+    image_height = image.get("height")
+    image_x = image.get("x")
+    image_y = image.get("y")
+    if (
+        page_width is None
+        or page_height is None
+        or image_width is None
+        or image_height is None
+        or image_x is None
+        or image_y is None
+    ):
+        return False
+
+    image_width = float(image_width)
+    image_height = float(image_height)
+    image_x = float(image_x)
+    image_y = float(image_y)
+    edge_margin_ratio = float(policy.get("background_edge_margin_ratio", 0.08))
+    edge_min_area_ratio = float(policy.get("background_edge_min_area_ratio", 0.18))
+    edge_min_span_ratio = float(policy.get("background_edge_min_span_ratio", 0.7))
+
+    touches_left = image_x <= page_width * edge_margin_ratio
+    touches_top = image_y <= page_height * edge_margin_ratio
+    touches_right = (image_x + image_width) >= page_width * (1 - edge_margin_ratio)
+    touches_bottom = (image_y + image_height) >= page_height * (1 - edge_margin_ratio)
+    touches_edge = touches_left or touches_top or touches_right or touches_bottom
+    width_ratio = image_width / page_width if page_width else 0.0
+    height_ratio = image_height / page_height if page_height else 0.0
+    span_ratio = max(width_ratio, height_ratio)
+
+    return (
+        touches_edge
+        and coverage_ratio >= edge_min_area_ratio
+        and span_ratio >= edge_min_span_ratio
+    )
+
+
+def group_images_by_page(
+    images: list[dict],
+    page_text_stats: dict[int, dict[str, int]],
+    policy: dict,
+) -> tuple[dict[int, list[dict]], int]:
+    """依頁碼整理圖片，並略過符合背景條件的圖片。"""
+    repeat_file_size_threshold = int(policy.get("repeat_file_size_threshold", 0) or 0)
+    repeat_visual_threshold = int(policy.get("repeat_visual_threshold", 0) or 0)
+    background_dominant_color_ratio_threshold = float(
+        policy.get("background_dominant_color_ratio_threshold", 0.85)
+    )
+
     size_counts = Counter(
         size_key
         for image in images
         if (size_key := image_file_size_key(image)) is not None
+    )
+    visual_counts = Counter(
+        visual_key
+        for image in images
+        if (visual_key := image_visual_key(image)) is not None
     )
 
     page_images: dict[int, list[dict]] = defaultdict(list)
     skipped = 0
     for image in images:
         size_key = image_file_size_key(image)
+        visual_key = image_visual_key(image)
+        dominant_color_ratio = image_dominant_color_ratio(image)
+        is_background = is_background_candidate(image, page_text_stats, policy)
+
         if (
+            is_background
+            and
             repeat_file_size_threshold > 0
             and size_key is not None
             and size_counts[size_key] >= repeat_file_size_threshold
+        ):
+            skipped += 1
+            continue
+
+        if (
+            is_background
+            and
+            repeat_visual_threshold > 0
+            and visual_key is not None
+            and visual_counts[visual_key] >= repeat_visual_threshold
+        ):
+            skipped += 1
+            continue
+
+        if (
+            is_background
+            and
+            dominant_color_ratio is not None
+            and dominant_color_ratio >= background_dominant_color_ratio_threshold
         ):
             skipped += 1
             continue
@@ -309,10 +466,6 @@ def split_chapters(config: dict, project_root: Path):
     source_path = project_root / config["source"]
     output_dir = project_root / config["output_dir"]
     clean_patterns = config.get("clean_patterns", [])
-    manifest_images, manifest_path, repeat_file_size_threshold = load_image_manifest(config, project_root)
-    page_images, skipped_images = group_images_by_page(manifest_images, repeat_file_size_threshold)
-    assets_dir = resolve_assets_dir(config, project_root)
-    source_slug = infer_source_stem(Path(config["source"]))
 
     if not source_path.exists():
         print(f"❌ 找不到來源檔案: {source_path}")
@@ -322,10 +475,15 @@ def split_chapters(config: dict, project_root: Path):
     print(f"📖 來源檔案: {source_path}")
     content = source_path.read_text(encoding="utf-8")
     pages = extract_pages(content)
+    page_text_stats = build_page_text_stats(pages, clean_patterns)
+    manifest_images, manifest_path, image_policy = load_image_manifest(config, project_root)
+    page_images, skipped_images = group_images_by_page(manifest_images, page_text_stats, image_policy)
+    assets_dir = resolve_assets_dir(config, project_root)
+    source_slug = infer_source_stem(Path(config["source"]))
     print(f"   共 {len(pages)} 頁")
     if manifest_path is not None:
         print(f"🖼️  圖片 manifest: {manifest_path}")
-        print(f"   可用圖片 {len(manifest_images)} 張，略過高重複檔案大小 {skipped_images} 張")
+        print(f"   可用圖片 {len(manifest_images)} 張，略過背景候選 {skipped_images} 張")
     print("-" * 50)
 
     total_files = 0
@@ -345,6 +503,7 @@ def split_chapters(config: dict, project_root: Path):
 
             start_page, end_page = page_range
             output_path = section_dir / f"{filename}.md"
+            output_path.parent.mkdir(parents=True, exist_ok=True)
             section_content, image_count = build_section_content(
                 pages,
                 start_page,

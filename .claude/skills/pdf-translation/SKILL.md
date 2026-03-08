@@ -38,6 +38,12 @@ uv run python scripts/split_chapters.py --init
 
 2. Edit `chapters.json` with source file, section order, file titles, and page ranges.
 
+Mapping rules:
+- Use semantic chapter/file titles and slugs from the source TOC or clear headings.
+- Do not split one long chapter into generic numbered parts like `1`, `2`, `3`, `part-1`, or `一`, `二`, `三` unless those are the real source headings.
+- If a chapter needs internal subdivision, prefer nested file paths such as `lore/factions` so the output uses subdirectories under the same section.
+- If the source does not provide reliable subordinate headings, keep the chapter in one file instead of fabricating numbered chunks.
+
 Reference snippet:
 
 ```json
@@ -46,17 +52,23 @@ Reference snippet:
   "output_dir": "docs/src/content/docs",
   "chapters": {
     "section-slug": {
-      "title": "Chapter Title",
-      "order": 1,
-      "files": {
-        "filename": {
-          "title": "Page Title",
-          "description": "SEO Description",
-          "pages": [1, 10],
-          "order": 0
+        "title": "Chapter Title",
+        "order": 1,
+        "files": {
+          "filename": {
+            "title": "Page Title",
+            "description": "SEO Description",
+            "pages": [1, 10],
+            "order": 0
+          },
+          "subtopic-slug/detail-slug": {
+            "title": "Nested Page Title",
+            "description": "Nested SEO Description",
+            "pages": [11, 18],
+            "order": 1
+          }
         }
       }
-    }
   }
 }
 ```

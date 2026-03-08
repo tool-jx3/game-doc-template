@@ -165,7 +165,7 @@ super-translate [target]
 3. 提取 PDF 與章節裁切（Python）
    1. `uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf`
    2. `uv run python scripts/split_chapters.py --init`
-   3. 編輯 `chapters.json`（設定章節與頁碼範圍）
+   3. 編輯 `chapters.json`（設定章節與頁碼範圍；長章節優先用來源子標題或巢狀路徑切分，避免 `1`、`2`、`3` 這類無語意命名）
    4. `uv run python scripts/split_chapters.py`  
       產出檔案到 `docs/src/content/docs/`。
 
@@ -209,6 +209,7 @@ uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf
 uv run python scripts/split_chapters.py --init
 
 # 3. 編輯 chapters.json 設定章節結構
+#    可用巢狀檔名，例如 combat/damage；避免把長章節拆成 1、2、3
 
 # 4. 拆分章節
 uv run python scripts/split_chapters.py

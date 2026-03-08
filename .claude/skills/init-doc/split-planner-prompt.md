@@ -21,9 +21,12 @@ Task tool (general-purpose):
     - Do not ask the user whether to split.
     - Build config compatible with `scripts/split_chapters.py`.
     - Use lowercase kebab-case ASCII for section/file slugs.
+    - Use semantic TOC-derived or heading-derived slugs for every file.
+    - Never invent generic numeric-only file slugs or titles such as `1`, `2`, `3`, `part-1`, `part-2`, `一`, `二`, or `三` unless the source itself uses that numbered label as the real heading.
     - Preserve TOC order from source.
     - Use contiguous, non-overlapping page ranges derived from TOC boundaries.
     - If splitting is not necessary, produce one section with one `index` file covering full range.
+    - When a long chapter needs internal subdivision, prefer nested semantic file paths in `files` (for example `combat/damage`) so output can use subdirectories without changing the top-level section grouping.
 
     ## Critical: Page Number Mapping
 
@@ -39,7 +42,9 @@ Task tool (general-purpose):
     ## Planning Basis
 
     - Basis is source TOC structure and heading landmarks.
+    - Prefer actual subordinate headings from the source over arbitrary page-count splits.
     - Avoid purely semantic refactoring not present in source TOC.
+    - If a chapter is long but lacks trustworthy subordinate headings, keep it as one file and report that risk instead of fabricating numbered parts.
 
     ## Required Output (JSON Only)
 
@@ -58,6 +63,12 @@ Task tool (general-purpose):
                 "description": "...",
                 "pages": [1, 10],
                 "order": 0
+              },
+              "subtopic-slug/detail-slug": {
+                "title": "...",
+                "description": "...",
+                "pages": [11, 16],
+                "order": 1
               }
             }
           }

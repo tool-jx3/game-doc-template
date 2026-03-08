@@ -24,6 +24,10 @@ Task tool (general-purpose):
     - Below 500 or above 2800 words is allowed only with explicit TOC-based reason.
     - Keep config compatible with `scripts/split_chapters.py`.
     - Do not ask user whether to split.
+    - Rebalance only with real subordinate headings found in the source; do not invent arbitrary page-count chunks.
+    - When a long chapter needs multiple files, use nested semantic file paths in `files` (for example `equipment/armor`) instead of generic numbered parts.
+    - Never produce numeric-only or generic part slugs/titles such as `1`, `2`, `3`, `part-1`, `part-2`, `一`, `二`, or `三` unless that numbering is the actual source heading.
+    - If no trustworthy subordinate heading exists, keep the oversized file and record the reason in `exceptions` or `unresolved_critical`.
 
     ## Output JSON Only
 
@@ -34,7 +38,7 @@ Task tool (general-purpose):
         "output_dir": "docs/src/content/docs",
         "chapters": {}
       },
-      "wordcount_estimate": [{ "file": "section-slug/index", "words": 1200 }],
+      "wordcount_estimate": [{ "file": "section-slug/subtopic-slug/detail-slug", "words": 1200 }],
       "exceptions": [{ "file": "...", "reason": "TOC constraint" }],
       "unresolved_critical": []
     }

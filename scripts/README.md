@@ -69,12 +69,22 @@ uv run python scripts/split_chapters.py --init
                     "title": "規則總覽",
                     "description": "遊戲規則概述",
                     "pages": [1, 20]
+                },
+                "combat/damage": {
+                    "title": "傷害規則",
+                    "description": "戰鬥章節中的傷害處理",
+                    "pages": [21, 28]
                 }
             }
         }
     }
 }
 ```
+
+切分原則：
+- 優先依來源目錄或明確子標題切分。
+- 若單一章節過長，可在 `files` 使用巢狀路徑（例如 `combat/damage`）輸出到子目錄。
+- 不要為了平均字數，把同一章硬拆成 `1`、`2`、`3`、`part-1` 或「一、二、三」這類沒有語意的檔名；若來源沒有可靠子標題，寧可維持單檔。
 
 ### 3. 拆分章節
 
@@ -94,6 +104,14 @@ uv run python scripts/split_chapters.py
 | `output_dir` | 輸出目錄 |
 | `clean_patterns` | 要移除的正規表達式陣列 |
 | `chapters` | 章節定義 |
+| `images.repeat_file_size_threshold` | 以檔案大小重複次數略過疑似背景圖 |
+| `images.repeat_visual_threshold` | 以視覺指紋重複次數略過疑似背景圖 |
+| `images.background_min_coverage_ratio` | 只有覆蓋頁面達一定比例才視為背景候選 |
+| `images.background_min_text_tokens` | 只有該頁文字量夠多才把大面積圖片視為背景候選 |
+| `images.background_edge_margin_ratio` | 判定貼齊頁邊的大區塊背景時使用的邊界容差 |
+| `images.background_edge_min_area_ratio` | 貼邊大區塊至少需達到的面積比例 |
+| `images.background_edge_min_span_ratio` | 貼邊大區塊至少需達到的長邊比例 |
+| `images.background_dominant_color_ratio_threshold` | 單色占比達門檻時視為大面積背景候選 |
 
 ### 章節定義
 
@@ -113,6 +131,16 @@ uv run python scripts/split_chapters.py
     }
 }
 ```
+
+`files` 的 key 可使用巢狀路徑，例如 `equipment/weapons`，輸出會是 `docs/src/content/docs/<section>/equipment/weapons.md`。
+
+圖片背景過濾說明：
+- 目前不只看 `file_size`，也會讀取 manifest 內的 `visual_hash`、`coverage_ratio`、`dominant_color_ratio`。
+- 只有在「覆蓋頁面面積大」且「該頁文字量夠多」時，才會把圖片視為背景候選。
+- 另外也會抓「貼齊頁邊、長邊很長、而且該頁文字量夠多」的半頁或側欄背景。
+- 若同一種視覺樣態在多頁反覆出現，而且符合上述背景候選條件，會被略過。
+- 若圖片大部分幾乎都是同一個顏色，而且符合上述背景候選條件，也會被略過。
+- 建議先維持預設值；若書籍有大量滿版插畫被誤判，再微調 `repeat_visual_threshold` 與 `background_min_coverage_ratio`。
 
 ## 提示
 

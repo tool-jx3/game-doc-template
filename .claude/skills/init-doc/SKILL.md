@@ -159,6 +159,12 @@ uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
 Run chapter split planning with two focused agents.
 Pipeline: `toc-planner -> wordcount-planner`.
 
+Split policy for both planners:
+- Prefer semantic chapter/file boundaries from the source TOC or clear in-text subheadings.
+- Do not break one long chapter into generic numbered parts like `1`, `2`, `3`, `part-1`, or `一`, `二`, `三` unless those are the actual source headings.
+- When a long chapter needs internal subdivision, keep the top-level section slug stable and use nested file paths inside `files` (for example `equipment/weapons`) so the output can use subdirectories.
+- If no trustworthy subordinate headings exist, keep the chapter as one file and surface the risk instead of inventing arbitrary numbered splits.
+
 1. Create draft config path:
    - `.claude/skills/init-doc/.state/chapters.draft.json`
 2. Dispatch toc planner using `./split-planner-prompt.md` to generate TOC-aligned draft `chapters_config`.
