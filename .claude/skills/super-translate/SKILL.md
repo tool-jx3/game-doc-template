@@ -30,7 +30,7 @@ Before ANY action, create tasks using TaskCreate:
    - `$ARGUMENTS` specifies files → use directly.
    - No args / `all` / `next` → auto-select from `translation-progress.json`:
      1. Resume `in_progress` files first.
-     2. Then `not_started` in chapter order. Default batch = 3 files.
+     2. Then `not_started` in chapter order. Default batch = 5 files.
      3. Display and confirm:
         ```
         翻譯進度：已完成 X / Y 個章節
