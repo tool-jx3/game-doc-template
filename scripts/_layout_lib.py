@@ -53,7 +53,7 @@ def classify_page_layout(words: list[tuple], page_width: float) -> dict[str, obj
         return {"layout_profile": "unknown", "confidence": 0.0, "classified_lines": len(line_boxes)}
 
     left_boundary = page_width * 0.48
-    right_boundary = page_width * 0.52
+    right_boundary = page_width * 0.51
     left_lines = sum(1 for x0, x1 in line_boxes if x1 <= left_boundary)
     right_lines = sum(1 for x0, x1 in line_boxes if x0 >= right_boundary)
     spanning_lines = sum(1 for x0, x1 in line_boxes if x0 < left_boundary and x1 > right_boundary)

@@ -129,7 +129,7 @@ class TestClassifyPageLayout:
                 )
             )
         for i in range(6):
-            # Right column: x0=320 (> 0.52*600=312), x1=580
+            # Right column: x0=320 (> 0.51*600=306), x1=580
             words.extend(
                 _make_line_words(
                     320, 580,
