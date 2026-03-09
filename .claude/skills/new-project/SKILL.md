@@ -56,7 +56,8 @@ Create items for:
 ### Step 4: Resolve Variables
 
 ```bash
-TEMPLATE_REPO="weihung/game-doc-template"
+TEMPLATE_ROOT="<current_workspace_root>"
+CLONE_SCRIPT="$TEMPLATE_ROOT/gh-clone.sh"
 TARGET_DIR="<user_path>/<project_name>"
 PDF_PATH="<pdf_path>"
 GAME_TITLE_EN="<derived_from_pdf_filename>"
@@ -71,13 +72,17 @@ Preferred path:
 
 ```bash
 cd <user_path>
-gh repo create <project_name> --template $TEMPLATE_REPO --$REPO_VISIBILITY --clone
+if [ "$REPO_VISIBILITY" = "public" ]; then
+  "$CLONE_SCRIPT" <project_name> --public
+else
+  "$CLONE_SCRIPT" <project_name>
+fi
 ```
 
 Fallback local-copy path:
 
 ```bash
-cp -r <template_path> <TARGET_DIR>
+cp -r "$TEMPLATE_ROOT" <TARGET_DIR>
 cd <TARGET_DIR>
 rm -rf .git
 git init
