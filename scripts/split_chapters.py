@@ -147,14 +147,41 @@ def get_page_range(pages: dict[int, str], start: int, end: int) -> str:
 
 
 
+def _yaml_safe(value: str) -> str:
+    """如果值含有 YAML 特殊字元（: # 等），加雙引號保護。"""
+    if any(ch in value for ch in (":", "#", "{", "}", "[", "]", ",", "&", "*", "?", "|", "-", "<", ">", "=", "!", "%", "@", "`")):
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    return value
+
+
+def _strip_duplicate_heading(content: str, title: str) -> str:
+    """移除內文開頭與 frontmatter title 重複的 H1/H2 標題。"""
+    lines = content.split("\n")
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        m = re.match(r'^#{1,2}\s+(.+)', stripped)
+        if m:
+            heading_text = m.group(1).strip()
+            if heading_text == title:
+                lines[i] = ""
+                while i + 1 < len(lines) and not lines[i + 1].strip():
+                    lines.pop(i + 1)
+                return "\n".join(lines)
+        break
+    return content
+
+
 def generate_frontmatter(title: str, description: str = "", order: int | None = None) -> str:
     """生成 Starlight frontmatter"""
     lines = [
         "---",
-        f"title: {title}",
+        f"title: {_yaml_safe(title)}",
     ]
     if description:
-        lines.append(f"description: {description}")
+        lines.append(f"description: {_yaml_safe(description)}")
     if order is not None:
         lines.append("sidebar:")
         lines.append(f"  order: {order}")
@@ -417,6 +444,7 @@ def split_chapters(config: dict, project_root: Path):
             )
 
             frontmatter = generate_frontmatter(title, description, order)
+            section_content = _strip_duplicate_heading(section_content, title)
             full_content = frontmatter + "\n" + section_content
             output_path.write_text(full_content, encoding="utf-8")
 
