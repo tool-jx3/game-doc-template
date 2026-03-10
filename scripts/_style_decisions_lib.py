@@ -24,6 +24,10 @@ TRANSLATION_MODE_OPTIONS = {
         "name": "摘要翻譯",
         "description": "精簡翻譯，提取重點規則，省略範例與冗長說明",
     },
+    "bilingual": {
+        "name": "雙語模式",
+        "description": "中文翻譯為主，英文原文以 blockquote 附於每段之後",
+    },
 }
 
 DEFAULT_STYLE_DECISIONS_PAYLOAD = {

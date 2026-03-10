@@ -17,7 +17,7 @@
       "additionalProperties": false,
       "required": ["mode"],
       "properties": {
-        "mode": { "enum": ["full", "summary"] },
+        "mode": { "enum": ["full", "summary", "bilingual"] },
         "reason": { "type": "string" },
         "options": {
           "type": "object",
