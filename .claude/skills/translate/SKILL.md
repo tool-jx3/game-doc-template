@@ -32,9 +32,12 @@ Before ANY action, create tasks using TaskCreate:
 
 2. Resolve target files:
    - If `$ARGUMENTS` specifies concrete file paths or a scoped pattern → use those directly as the current batch.
-   - Otherwise (no args, `all`, or `next`) → **auto-select from `translation-progress.json`**:
-     1. **Resume first**: collect all files with status `in_progress` (highest priority).
-     2. **Then queue**: collect files with status `not_started`, in chapter order.
+   - Otherwise (no args, `all`, or `next`) → **auto-select using progress script**:
+     ```bash
+     uv run python scripts/progress_read.py --next 5 --json
+     ```
+     1. Select files with status `not_started`, in chapter order.
+     2. If user explicitly requests resume → include `in_progress` files: `--status in_progress`.
      3. Display selected files to user in Traditional Chinese before proceeding:
         ```
         翻譯進度：已完成 X / Y 個章節
@@ -88,7 +91,10 @@ Use the printed path as `<DRAFT_FILE>` for that file.
 For each target file:
 
 1. Mark task item `in_progress`
-2. Update `translation-progress.json` status to `in_progress`
+2. Update progress:
+   ```bash
+   uv run python scripts/progress_edit.py --file <TARGET_FILE> --status in_progress
+   ```
 3. Read source content, `glossary.json`, and `style-decisions.json`（特別包含 `translation_notes`）
 4. Get draft path:
    ```bash
@@ -121,11 +127,11 @@ For each target file:
    ```bash
    uv run python scripts/draft.py --skill translate writeback <TARGET_FILE>
    ```
-7. **Immediately** update `translation-progress.json`:
-   - Set file status to `completed`
-   - Recalculate `_meta.completed` (count of completed entries)
-   - Update `_meta.updated` to current timestamp
-   Do NOT defer this update; write it before moving to the next file.
+7. **Immediately** update progress:
+   ```bash
+   uv run python scripts/progress_edit.py --file <TARGET_FILE> --status completed
+   ```
+   Do NOT defer this update; run it before moving to the next file.
 8. Mark task item completed
 
 **Unknown term handling:**
@@ -157,7 +163,7 @@ git commit -m "progress: X/Y"
 
 4. Commit message rules:
    - keep it short and progress-only
-   - use the current completion count from `translation-progress.json`
+   - use the current completion count from `uv run python scripts/progress_read.py --json`
    - do not mention filenames, rationale, or extra prose
 5. Never stage or commit unrelated user changes.
 6. If no file reached `completed` in this batch, skip the commit.
@@ -200,7 +206,7 @@ digraph translate {
 
 ## Progress Sync Contract (Required)
 
-1. Sync task list and `translation-progress.json` at file start and file close.
+1. Sync task list and progress (via `progress_edit.py`) at file start and file close.
 2. Never defer sync until end-of-run.
 3. Create the batch checkpoint commit immediately after batch completion; do not postpone it to a later batch.
 
@@ -235,7 +241,7 @@ Return to Step 1 or 3 when:
 
 After translation, run `/check-consistency` and `/check-completeness` as needed.
 
-If `translation-progress.json` shows all files are `completed` after this batch, invoke the `final-proofread` skill to run the three-gate quality sweep before publishing.
+If `uv run python scripts/progress_read.py` shows all files are `completed` after this batch, invoke the `final-proofread` skill to run the three-gate quality sweep before publishing.
 
 ## Example Usage
 

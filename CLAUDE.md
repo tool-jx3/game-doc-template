@@ -119,6 +119,16 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 - Read consistency report: `uv run python scripts/term_read.py`
 - Validate glossary schema: `uv run python scripts/validate_glossary.py`
 
+### Translation Progress Scripts
+
+- Read progress summary: `uv run python scripts/progress_read.py`
+- Read as JSON: `uv run python scripts/progress_read.py --json`
+- Show next N files to translate: `uv run python scripts/progress_read.py --next 5`
+- Filter by status: `uv run python scripts/progress_read.py --status in_progress`
+- Update file status: `uv run python scripts/progress_edit.py --file "<FILE>" --status completed`
+- Show file entry: `uv run python scripts/progress_edit.py --file "<FILE>" --show`
+- Create progress file (bilingual): `uv run python scripts/progress_edit.py --progress-file data/translation-progress-bilingual.json --create-if-missing`
+
 ### Data File Formats
 
 **glossary.json**

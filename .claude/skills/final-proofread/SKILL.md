@@ -34,11 +34,15 @@ Announce: "Created 5 tasks. Starting execution..."
 2. Default scope: `docs/src/content/docs/**/*.md`
    If `$ARGUMENTS` specifies a narrower path, restrict scope accordingly.
 
-3. Load `translation-progress.json`. Identify:
+3. Load translation progress:
+   ```bash
+   uv run python scripts/progress_read.py --json
+   ```
+   Identify:
    - Files with status `completed` — primary audit targets.
    - Files with status `not_started` or `in_progress` — flag as incomplete, exclude from Gates 2–3 unless user asks to include them.
 
-**Verification:** Scope resolved; `translation-progress.json` loaded.
+**Verification:** Scope resolved; progress data loaded.
 
 ### Gate 1: Frontmatter Completeness Check
 

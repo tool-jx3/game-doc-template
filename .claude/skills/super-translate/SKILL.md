@@ -28,9 +28,12 @@ Before ANY action, create tasks using TaskCreate:
 
 2. Resolve target files:
    - `$ARGUMENTS` specifies files → use directly.
-   - No args / `all` / `next` → auto-select from `translation-progress.json`:
-     1. Resume `in_progress` files first.
-     2. Then `not_started` in chapter order. Default batch = 5 files.
+   - No args / `all` / `next` → auto-select using progress script:
+     ```bash
+     uv run python scripts/progress_read.py --next 5 --json
+     ```
+     1. Select files with status `not_started`, in chapter order. Default batch = 5 files.
+     2. If user explicitly requests resume → include `in_progress` files: `--status in_progress`.
      3. Display and confirm:
         ```
         翻譯進度：已完成 X / Y 個章節
@@ -69,7 +72,10 @@ Read `style-decisions.json.translation_mode.mode`. If missing, ask user:
 
 **For each target file, run the pipeline:**
 
-1. Update task → `in_progress`; update `translation-progress.json` → `in_progress`
+1. Update task → `in_progress`; update progress:
+   ```bash
+   uv run python scripts/progress_edit.py --file <TARGET_FILE> --status in_progress
+   ```
 2. Read source content; resolve draft path:
    ```bash
    uv run python scripts/draft.py --skill super-translate path <TARGET_FILE>
@@ -100,11 +106,15 @@ Only if reviewer passes:
 uv run python scripts/draft.py --skill super-translate writeback <TARGET_FILE>
 ```
 
-**Immediately** update `translation-progress.json`: status → `completed`, recalculate `_meta.completed`, update `_meta.updated`. Update task → `completed`.
+**Immediately** update progress:
+```bash
+uv run python scripts/progress_edit.py --file <TARGET_FILE> --status completed
+```
+Update task → `completed`.
 
 If blocked: keep source unchanged, status stays `in_progress`, mark task blocked.
 
-**Verification:** Writeback script exits 0; `translation-progress.json` shows file as `completed` with updated `_meta`; task marked `completed`.
+**Verification:** Writeback script exits 0; `progress_edit.py` exits 0; task marked `completed`.
 
 ### Step 6: Batch Checkpoint
 
@@ -172,7 +182,7 @@ digraph super_translate {
 
 ## Progress Sync Contract
 
-1. Sync tasks and `translation-progress.json` at file start, every review loop, and file close.
+1. Sync tasks and progress (via `progress_edit.py`) at file start, every review loop, and file close.
 2. NEVER defer sync until end-of-run.
 3. Create batch checkpoint commit immediately after each completed batch.
 
@@ -195,7 +205,7 @@ digraph super_translate {
 
 ## Next Step
 
-If `translation-progress.json` shows all files are `completed` after this batch, invoke the `final-proofread` skill to run the three-gate quality sweep before publishing.
+If `uv run python scripts/progress_read.py` shows all files are `completed` after this batch, invoke the `final-proofread` skill to run the three-gate quality sweep before publishing.
 
 ## References
 

@@ -38,7 +38,15 @@ Before ANY action, create tasks using TaskCreate:
    - `chapters.json` with `"mode": "bilingual"`
    If any missing or mode mismatch, stop and ask user to run `/init-doc` first.
 
-2. Resolve target files from `$ARGUMENTS` or auto-select from `translation-progress-bilingual.json` (if it exists). If the progress file does not exist, treat all files from `chapters.json` as `not_started`.
+2. Resolve target files from `$ARGUMENTS` or auto-select using progress script:
+   ```bash
+   uv run python scripts/progress_read.py --progress-file data/translation-progress-bilingual.json --next 5 --json
+   ```
+   - Selects `not_started` files by default. If user explicitly requests resume → use `--status in_progress`.
+   - If the progress file does not exist, create it first:
+     ```bash
+     uv run python scripts/progress_edit.py --progress-file data/translation-progress-bilingual.json --create-if-missing
+     ```
 
 3. Display selected files to user in Traditional Chinese before proceeding.
 
@@ -84,9 +92,10 @@ For each target file:
    - English blockquote lines (starting with `>`) preserved exactly — no modifications?
    - Content contamination (paragraphs with no source)?
 6. Write final file to `docs/src/content/docs/bilingual/<path>`
-7. Update `translation-progress-bilingual.json` (create if absent):
-   - Set file status to `completed`
-   - Update `_meta.completed` and `_meta.updated`
+7. Update progress:
+   ```bash
+   uv run python scripts/progress_edit.py --progress-file data/translation-progress-bilingual.json --file <TARGET_FILE> --status completed
+   ```
 8. Mark task completed
 
 **Verification:** Self-review checklist passes; output file written; progress JSON updated.
@@ -107,7 +116,7 @@ After all files in the batch are processed:
 git commit -m "progress (bilingual): X/Y"
 ```
 
-Where X/Y is current completion from `translation-progress-bilingual.json`.
+Where X/Y is current completion from `uv run python scripts/progress_read.py --progress-file data/translation-progress-bilingual.json --json`.
 
 **Verification:** `git log -1` shows progress commit.
 
@@ -128,7 +137,7 @@ Mark final verification task completed.
 |---------|---------|
 | "Modify the English blockquote lines" | Never alter `>` lines. They are source text. |
 | "Skip bilingual_prep, I'll format manually" | bilingual_prep ensures consistent structure. Always use it. |
-| "translation-progress-bilingual.json doesn't exist, skip tracking" | Create it on first run. |
+| "translation-progress-bilingual.json doesn't exist, skip tracking" | Create it with `progress_edit.py --create-if-missing`. |
 | "One file done, no need for checkpoint" | Every completed batch gets a commit. |
 | "Skip terminology preflight, it was fine last time" | Glossary changes between runs. Always preflight. |
 
