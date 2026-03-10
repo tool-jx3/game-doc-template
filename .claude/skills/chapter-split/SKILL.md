@@ -74,6 +74,19 @@ Before writing the final config:
 }
 ```
 
+#### Bilingual mode
+
+Read `style-decisions.json` for `translation_mode.mode`.
+If `mode == "bilingual"`, add to the final config:
+
+```json
+{
+  "mode": "bilingual"
+}
+```
+
+`split_chapters.py` will resolve the effective output path as `<output_dir>/bilingual/`. Do NOT manually set `output_dir` to include `bilingual/` — the script handles that automatically.
+
 Write the final config to `chapters.json` unless the caller explicitly provided another config path.
 
 ### Step 5: Execute Split and Regenerate Navigation
@@ -106,7 +119,7 @@ cd docs && bun dev
 
 Return the finalized chapter map and generated docs to the caller:
 - `init-doc` should continue with progress tracker creation and final gate
-- manual invocations can continue to `/translate` or `/super-translate`
+- manual invocations: if `translation_mode.mode == "bilingual"`, next skill is `/bilingual-translate`; otherwise continue to `/translate` or `/super-translate`
 
 ## Prompt Templates
 
