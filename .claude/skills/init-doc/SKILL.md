@@ -123,7 +123,23 @@ uv run python scripts/style_decisions.py set-document-format \
 uv run python scripts/validate_style_decisions.py
 ```
 
-**Verification:** `style-decisions.json` contains `document_format` section; `validate_style_decisions.py` exits 0.
+Ask user to choose translation mode in Traditional Chinese:
+
+```text
+請選擇翻譯模式：
+A. 純中文翻譯：完整翻譯所有內容，僅保留中文
+B. 雙語模式：中文翻譯為主，英文原文以 blockquote 附於每段之後
+```
+
+Persist via:
+
+```bash
+uv run python scripts/style_decisions.py set-translation-mode \
+  --mode "<full|bilingual>" \
+  --reason "使用者在 init-doc 選擇翻譯模式"
+```
+
+**Verification:** `style-decisions.json` contains `document_format` section and `translation_mode` section; `validate_style_decisions.py` exits 0.
 
 ### Step 6: Select Images, Theme, and Homepage Content
 
@@ -346,7 +362,8 @@ Return to earlier steps when:
 
 ## Next Step
 
-Continue with `/translate` or `/super-translate`.
+If `style-decisions.json` has `translation_mode.mode == "bilingual"`, continue with `/bilingual-translate`.
+Otherwise, continue with `/translate` or `/super-translate`.
 
 ## Example Usage
 
