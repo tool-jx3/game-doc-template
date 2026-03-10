@@ -46,6 +46,19 @@ Task tool (general-purpose):
     - Avoid purely semantic refactoring not present in source TOC.
     - If a chapter is long but lacks trustworthy subordinate headings, keep it as one file and report that risk instead of fabricating numbered parts.
 
+    ## Index File Policy (Critical)
+
+    Only add an `index` file to a section when AT LEAST ONE of the following is true:
+    1. The source has ≥150 words of prose between the section heading and the first subsection heading (meaningful introductory content).
+    2. The section is a navigation-only grouping that has no prose content of its own, and a landing/overview page is needed to orient the reader.
+
+    DO NOT add an `index` file when:
+    - The section's content immediately begins with a subsection heading with little or no prose before it.
+    - The content that would go into `index` is simply a restatement of the section title.
+    - An `index` page would be nearly empty (fewer than 100 words of actual content).
+
+    When omitting the index, map the first subsection directly as the first file in the section's `files`. The section title becomes the directory grouping only.
+
     ## Required Output (JSON Only)
 
     {

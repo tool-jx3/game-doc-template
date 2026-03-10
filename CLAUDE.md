@@ -105,7 +105,8 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 ### Draft Scripts
 
 - Get draft path (creates dir): `uv run python scripts/draft.py [--skill translate|super-translate] path <source>`
-- Write back draft to source: `uv run python scripts/draft.py [--skill translate|super-translate] writeback <source>`
+- Split large file at H2 into chunk drafts: `uv run python scripts/draft.py [--skill translate|super-translate] chunk-path <source>`
+- Write back draft (or merge chunks) to source: `uv run python scripts/draft.py [--skill translate|super-translate] writeback <source>`
 - Clean all drafts for skill: `uv run python scripts/draft.py [--skill translate|super-translate] clean`
 
 ### Terminology Scripts
