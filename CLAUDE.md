@@ -76,6 +76,7 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 | `/chapter-split`      | Split extracted Markdown into semantic docs pages and regenerate nav  |
 | `/translate`          | Translate a specific section or file                                  |
 | `/super-translate`    | Multi-agent translate + review loop (up to 3 iterations) for quality  |
+| `/bilingual-translate` | 雙語翻譯：中文主體 + 英文 blockquote（單輪，無 review 迴圈） |
 | `/check-consistency`  | Validate terminology consistency                                      |
 | `/term-decision`      | Make terminology decisions and batch replace                          |
 | `/check-completeness` | Check for missing rule content                                        |
