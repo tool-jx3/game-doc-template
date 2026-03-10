@@ -145,24 +145,25 @@ def generate_index(chapters: dict, style: dict) -> str:
 
 # --- Sidebar generation ---
 
-def generate_sidebar_entries(chapters: dict) -> str:
+def generate_sidebar_entries(chapters: dict, mode: str = "zh_only") -> str:
     """Generate JS sidebar array entries."""
     sections = sorted_sections(chapters)
     entries = []
     for slug, section in sections:
         title = section["title"]
+        directory = f"bilingual/{slug}" if mode == "bilingual" else slug
         entries.append(
             f"\t\t\t\t{{\n"
             f"\t\t\t\t\tlabel: '{title}',\n"
-            f"\t\t\t\t\tautogenerate: {{ directory: '{slug}' }},\n"
+            f"\t\t\t\t\tautogenerate: {{ directory: '{directory}' }},\n"
             f"\t\t\t\t}}"
         )
     return ",\n".join(entries)
 
 
-def update_astro_sidebar(config_text: str, chapters: dict) -> str:
+def update_astro_sidebar(config_text: str, chapters: dict, mode: str = "zh_only") -> str:
     """Replace sidebar array content in astro.config.mjs."""
-    entries = generate_sidebar_entries(chapters)
+    entries = generate_sidebar_entries(chapters, mode=mode)
     # Match the sidebar array: sidebar: [ ... ],
     pattern = r"(sidebar:\s*\[)\s*\n.*?\n(\s*\],)"
     replacement = f"\\1\n{entries}\n\\2"
@@ -178,8 +179,13 @@ def main() -> None:
         print(f"❌ 找不到 {CHAPTERS_FILE}", file=sys.stderr)
         raise SystemExit(1)
 
-    config = load_json(CHAPTERS_FILE)
-    chapters = config.get("chapters", {})
+    chapters_data = load_json(CHAPTERS_FILE)
+    if "chapters" in chapters_data:
+        chapters = chapters_data["chapters"]
+        mode = chapters_data.get("mode", "zh_only")
+    else:
+        chapters = chapters_data
+        mode = "zh_only"
     if not chapters:
         print("❌ chapters.json 中沒有章節資料", file=sys.stderr)
         raise SystemExit(1)
@@ -195,7 +201,7 @@ def main() -> None:
     # Update astro.config.mjs sidebar
     if ASTRO_CONFIG.exists():
         original = ASTRO_CONFIG.read_text(encoding="utf-8")
-        updated = update_astro_sidebar(original, chapters)
+        updated = update_astro_sidebar(original, chapters, mode=mode)
         if updated != original:
             ASTRO_CONFIG.write_text(updated, encoding="utf-8")
             print(f"✓ 已更新側邊欄: {ASTRO_CONFIG}")
