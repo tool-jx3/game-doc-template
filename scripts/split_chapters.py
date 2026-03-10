@@ -392,6 +392,8 @@ def split_chapters(config: dict, project_root: Path):
     """根據設定拆分章節"""
     source_path = project_root / config["source"]
     output_dir = project_root / config["output_dir"]
+    if config.get("mode") == "bilingual":
+        output_dir = output_dir / "bilingual"
     clean_patterns = config.get("clean_patterns", [])
 
     if not source_path.exists():
