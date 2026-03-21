@@ -34,6 +34,38 @@ def first_file_description(section: dict) -> str:
     return ""
 
 
+def yaml_safe(value: str) -> str:
+    """Wrap YAML-sensitive scalars in double quotes."""
+    if any(
+        ch in value
+        for ch in (
+            ":",
+            "：",
+            "#",
+            "{",
+            "}",
+            "[",
+            "]",
+            ",",
+            "&",
+            "*",
+            "?",
+            "|",
+            "-",
+            "<",
+            ">",
+            "=",
+            "!",
+            "%",
+            "@",
+            "`",
+        )
+    ):
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    return value
+
+
 # --- Index page generation ---
 
 def generate_index(chapters: dict, style: dict) -> str:
@@ -53,21 +85,21 @@ def generate_index(chapters: dict, style: dict) -> str:
 
     lines = [
         "---",
-        f"title: {title}",
-        f"description: {description}",
+        f"title: {yaml_safe(title)}",
+        f"description: {yaml_safe(description)}",
         "template: splash",
         "hero:",
-        f"  tagline: {tagline}",
+        f"  tagline: {yaml_safe(tagline)}",
         "  image:",
         "    file: ../../assets/hero.jpg",
         "  actions:",
-        f"    - text: {first_title}",
+        f"    - text: {yaml_safe(first_title)}",
         f"      link: /{first_slug}/",
         "      icon: right-arrow",
     ]
     if second_title:
         lines += [
-            f"    - text: {second_title}",
+            f"    - text: {yaml_safe(second_title)}",
             f"      link: /{second_slug}/",
             "      icon: document",
             "      variant: minimal",
