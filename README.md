@@ -166,9 +166,12 @@ super-translate [target]
 
 3. 提取 PDF 與章節裁切（Python）
    1. `uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf`
-   2. `uv run python scripts/split_chapters.py --init`
-   3. 編輯 `chapters.json`（設定章節與頁碼範圍；長章節優先用來源子標題或巢狀路徑切分，避免 `1`、`2`、`3` 這類無語意命名）
-   4. `uv run python scripts/split_chapters.py`  
+   2. 若是掃描 PDF，可改用 `uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr`
+   3. 日文掃描來源建議加 `--ocr-lang jpn+eng`；英文掃描來源建議加 `--ocr-lang eng`
+   4. 若來源是一整個 `jpg/png` 頁面資料夾，也可直接執行 `uv run python scripts/extract_pdf.py data/scans/your-rulebook-pages`
+   5. `uv run python scripts/split_chapters.py --init`
+   6. 編輯 `chapters.json`（設定章節與頁碼範圍；長章節優先用來源子標題或巢狀路徑切分，避免 `1`、`2`、`3` 這類無語意命名）
+   7. `uv run python scripts/split_chapters.py`  
       產出檔案到 `docs/src/content/docs/`。
 
 4. 術語預處理
@@ -207,6 +210,18 @@ super-translate [target]
 # 1. 提取 PDF
 uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf
 
+# 掃描 PDF 走 OCR
+uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr
+
+# 日文掃描 PDF
+uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr --ocr-lang jpn+eng
+
+# 英文掃描 PDF
+uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr --ocr-lang eng
+
+# 圖片資料夾走 OCR
+uv run python scripts/extract_pdf.py data/scans/your-rulebook-pages
+
 # 2. 產生章節設定範例
 uv run python scripts/split_chapters.py --init
 
@@ -218,6 +233,13 @@ uv run python scripts/split_chapters.py
 ```
 
 `uv sync` 會在專案根目錄建立 `.venv` 與 `uv.lock`，之後所有 Python 腳本請從根目錄以 `uv run python scripts/...` 執行。
+
+OCR 補充：
+- 先用 `tesseract --list-langs` 確認有安裝需要的語言包。
+- 繁體中文建議使用 `chi_tra+eng`。
+- 日文建議使用 `jpn+eng`。
+- 英文建議使用 `eng`。
+- 若同頁真的混排繁中、日文、英文，可用 `chi_tra+jpn+eng`，但一般仍建議使用最小必要語言集合。
 
 ### 清除範例資料（可選）
 

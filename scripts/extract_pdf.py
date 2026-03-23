@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
 PDF 提取工具
-將 PDF 轉換為 Markdown，支援文字與圖片提取
+將 PDF / EPUB / 圖片來源轉換為 Markdown，支援文字提取、OCR 與圖片提取
 
 使用方式：
-    python scripts/extract_pdf.py <pdf_file>
-    python scripts/extract_pdf.py <pdf_file> --include-images
-    python scripts/extract_pdf.py <pdf_file> --no-include-images
-    python scripts/extract_pdf.py <pdf_file> --skip-full-markitdown
-    python scripts/extract_pdf.py <pdf_file> --layout-profile double-column
-    python scripts/extract_pdf.py <pdf_file> --page-text-engine markitdown
+    python scripts/extract_pdf.py <source_file>
+    python scripts/extract_pdf.py <source_file> --include-images
+    python scripts/extract_pdf.py <source_file> --no-include-images
+    python scripts/extract_pdf.py <source_file> --skip-full-markitdown
+    python scripts/extract_pdf.py <source_file> --layout-profile double-column
+    python scripts/extract_pdf.py <source_file> --page-text-engine ocr
 
 輸出：
-    data/markdown/<檔名>.md                 - markitdown 提取版本
+    data/markdown/<檔名>.md                 - 整本文字版本
     data/markdown/<檔名>_pages.md           - 含頁碼標記版本（用於章節拆分）
     data/markdown/images/<檔名>/            - 提取的圖片
     data/markdown/images/<檔名>/manifest.json - 圖片位置與尺寸資訊
@@ -29,23 +29,21 @@ from _epub_lib import (
     extract_epub_with_pages,
     should_print_progress,
 )
-from _image_analysis import analyze_image_bytes, compute_visual_hash
+from _image_analysis import analyze_image_bytes
 from _layout_lib import (
-    MIN_QUALITY_PROBE_CHARS,
-    analyze_pymupdf_text_noise,
-    classify_page_layout,
     detect_layout_profile,
     extract_page_text_pymupdf,
     probe_pymupdf_text_quality,
-    sample_page_indices,
 )
-from _markdown_utils import (
-    LINKED_MARKDOWN_IMAGE_RE,
-    MARKDOWN_HEADING_RE,
-    MARKDOWN_IMAGE_RE,
-    extract_markdown_image_targets,
-    split_markdown_sections,
-    strip_markdown_images,
+from _ocr_lib import (
+    DEFAULT_OCR_DPI,
+    DEFAULT_OCR_LANG,
+    DEFAULT_OCR_PSM,
+    IMAGE_SOURCE_SUFFIXES,
+    ensure_tesseract_ready,
+    find_ocr_image_files,
+    render_pdf_page_for_ocr,
+    run_tesseract_ocr,
 )
 
 try:
@@ -59,15 +57,17 @@ except ImportError:
     pymupdf = None
 
 
-VALID_PAGE_TEXT_ENGINES = {"auto", "pymupdf", "markitdown"}
+VALID_PAGE_TEXT_ENGINES = {"auto", "ocr", "pymupdf", "markitdown"}
 VALID_LAYOUT_PROFILES = {"auto", "single-column", "double-column"}
-SUPPORTED_SOURCE_TYPES = {
+SUPPORTED_FILE_SOURCE_TYPES = {
     ".pdf": "pdf",
     ".epub": "epub",
+    **{suffix: "image" for suffix in IMAGE_SOURCE_SUFFIXES},
 }
 PAGE_TEXT_ENGINE_ALIASES = {
     "fitz": "pymupdf",
     "markdown": "markitdown",
+    "tesseract": "ocr",
 }
 LAYOUT_PROFILE_ALIASES = {
     "single": "single-column",
@@ -102,24 +102,41 @@ def normalize_layout_profile(value: object) -> str | None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="將 PDF / EPUB 提取成可切分的 Markdown")
-    parser.add_argument("pdf_file", help="來源 PDF / EPUB 檔案")
+    parser = argparse.ArgumentParser(description="將 PDF / EPUB / 圖片來源提取成可切分的 Markdown")
+    parser.add_argument("source_file", help="來源 PDF / EPUB / 圖片檔案或圖片資料夾")
     parser.add_argument(
         "--skip-full-markitdown",
         action="store_true",
-        help="略過整本 markitdown 提取，只保留 _pages.md 與圖片輸出",
+        help="略過整本 Markdown 輸出，只保留 _pages.md 與圖片輸出",
     )
     parser.add_argument(
         "--page-text-engine",
-        choices=("auto", "pymupdf", "markitdown"),
+        choices=("auto", "ocr", "pymupdf", "markitdown"),
         default="auto",
-        help="生成 _pages.md 時使用的頁面文字引擎（預設: auto；EPUB 目前固定使用 markitdown）",
+        help="生成 _pages.md 時使用的頁面文字引擎（預設: auto；圖片來源固定使用 ocr；EPUB 固定使用 markitdown）",
     )
     parser.add_argument(
         "--layout-profile",
         choices=("auto", "single-column", "double-column"),
         default="auto",
         help="文件版面設定（預設: auto；EPUB 目前不使用此設定）",
+    )
+    parser.add_argument(
+        "--ocr-lang",
+        default=DEFAULT_OCR_LANG,
+        help=f"OCR 語言設定，傳給 tesseract（預設: {DEFAULT_OCR_LANG}）",
+    )
+    parser.add_argument(
+        "--ocr-psm",
+        type=int,
+        default=DEFAULT_OCR_PSM,
+        help=f"OCR Page Segmentation Mode（預設: {DEFAULT_OCR_PSM}）",
+    )
+    parser.add_argument(
+        "--ocr-dpi",
+        type=int,
+        default=DEFAULT_OCR_DPI,
+        help=f"PDF 走 OCR 時的頁面 render DPI（預設: {DEFAULT_OCR_DPI}）",
     )
 
     include_group = parser.add_mutually_exclusive_group()
@@ -154,12 +171,40 @@ def prompt_include_images() -> bool:
 
 
 def detect_source_type(source_path: Path) -> str:
-    """判斷來源格式，目前支援 PDF 與 EPUB。"""
-    source_type = SUPPORTED_SOURCE_TYPES.get(source_path.suffix.lower())
+    """判斷來源格式，目前支援 PDF、EPUB、單張圖片與圖片資料夾。"""
+    if source_path.is_dir():
+        image_files = find_ocr_image_files(source_path)
+        if image_files:
+            return "image-dir"
+        supported = ", ".join(sorted(IMAGE_SOURCE_SUFFIXES))
+        raise SystemExit(
+            "❌ 不支援的資料夾輸入：目前僅支援包含 OCR 圖片檔的資料夾"
+            f"（可用副檔名：{supported}）"
+        )
+
+    source_type = SUPPORTED_FILE_SOURCE_TYPES.get(source_path.suffix.lower())
     if source_type is None:
-        supported = ", ".join(sorted(SUPPORTED_SOURCE_TYPES))
-        raise SystemExit(f"❌ 不支援的檔案格式：{source_path.suffix or '<none>'}（僅支援 {supported}）")
+        supported = ", ".join(sorted(SUPPORTED_FILE_SOURCE_TYPES))
+        raise SystemExit(
+            f"❌ 不支援的檔案格式：{source_path.suffix or '<none>'}（僅支援 {supported}）"
+        )
     return source_type
+
+
+def build_output_stem(source_path: Path, source_type: str | None = None) -> str:
+    """根據來源建立輸出檔名前綴。"""
+    resolved_source_type = source_type or detect_source_type(source_path)
+    if resolved_source_type == "image-dir":
+        return source_path.name
+    return source_path.stem
+
+
+def write_full_markdown(output_file: Path, page_texts: list[str], source_label: str) -> Path:
+    """將逐頁文字合併成整本 Markdown。"""
+    content = "\n\n".join(text.strip() for text in page_texts if text.strip()).strip()
+    output_file.write_text(f"{content}\n" if content else "", encoding="utf-8")
+    print(f"✓ 已提取（整本，{source_label}）: {output_file}")
+    return output_file
 
 
 def extract_with_markitdown(source_path: Path, output_dir: Path) -> Path | None:
@@ -230,6 +275,17 @@ def resolve_page_text_strategy(
 ) -> dict[str, object]:
     """綜合 CLI、style-decisions 與自動偵測，決定分頁提取策略。"""
     source_type = detect_source_type(pdf_path)
+    if source_type in {"image", "image-dir"}:
+        return {
+            "page_text_engine": "ocr",
+            "page_text_engine_source": "image-source",
+            "layout_profile": "single-column",
+            "layout_profile_source": "image-source",
+            "document_settings": {},
+            "detection": None,
+            "quality_probe": None,
+            "source_type": source_type,
+        }
     if source_type == "epub":
         return {
             "page_text_engine": "markitdown",
@@ -351,6 +407,65 @@ def extract_with_pages(
 
     print(f"✓ 已提取（含頁碼，{page_text_engine}）: {output_file}")
     return output_file
+
+
+def extract_with_ocr_pages(
+    source_path: Path,
+    output_dir: Path,
+    ocr_lang: str,
+    ocr_psm: int,
+    ocr_dpi: int,
+    progress_every: int = 25,
+) -> tuple[Path | None, list[str]]:
+    """使用 OCR 逐頁提取來源內容。"""
+    source_type = detect_source_type(source_path)
+    ensure_tesseract_ready(ocr_lang)
+    output_file = output_dir / f"{build_output_stem(source_path, source_type)}_pages.md"
+    page_texts: list[str] = []
+    progress_every = max(1, progress_every)
+
+    if source_type in {"image", "image-dir"}:
+        image_files = [source_path] if source_type == "image" else find_ocr_image_files(source_path)
+        total_pages = len(image_files)
+        with output_file.open("w", encoding="utf-8") as handle:
+            for page_num, image_path in enumerate(image_files, 1):
+                page_text = run_tesseract_ocr(image_path, ocr_lang=ocr_lang, ocr_psm=ocr_psm)
+                page_texts.append(page_text)
+                handle.write(f"\n\n<!-- PAGE {page_num} -->\n\n{page_text}")
+                if should_print_progress(page_num, total_pages, progress_every):
+                    print(f"↻ 分頁提取進度（ocr / image）: {page_num}/{total_pages}")
+
+        print(f"✓ 已提取（含頁碼，ocr）: {output_file}")
+        return output_file, page_texts
+
+    if source_type != "pdf":
+        raise RuntimeError(f"不支援的 OCR 來源型別：{source_type}")
+    if pymupdf is None:
+        print("⚠️  pymupdf 未安裝（需要用於 PDF OCR 分頁），跳過")
+        return None, []
+
+    doc = pymupdf.open(str(source_path))
+    total_pages = len(doc)
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            with output_file.open("w", encoding="utf-8") as handle:
+                for page_num, page in enumerate(doc, 1):
+                    page_image_path = Path(tmp_dir) / f"page_{page_num:04d}.png"
+                    render_pdf_page_for_ocr(page, page_image_path, dpi=ocr_dpi)
+                    page_text = run_tesseract_ocr(
+                        page_image_path,
+                        ocr_lang=ocr_lang,
+                        ocr_psm=ocr_psm,
+                    )
+                    page_texts.append(page_text)
+                    handle.write(f"\n\n<!-- PAGE {page_num} -->\n\n{page_text}")
+                    if should_print_progress(page_num, total_pages, progress_every):
+                        print(f"↻ 分頁提取進度（ocr / pdf）: {page_num}/{total_pages}")
+    finally:
+        doc.close()
+
+    print(f"✓ 已提取（含頁碼，ocr）: {output_file}")
+    return output_file, page_texts
 
 
 def build_image_filename(page_num: int, image_index: int, placement_index: int, rect, ext: str) -> str:
@@ -484,26 +599,32 @@ def extract_images(pdf_path: Path, output_dir: Path) -> list[dict]:
 
 def main():
     args = parse_args()
-    pdf_path = Path(args.pdf_file)
+    source_path = Path(args.source_file)
 
-    if not pdf_path.exists():
-        print(f"❌ 找不到檔案: {pdf_path}")
+    if not source_path.exists():
+        print(f"❌ 找不到檔案: {source_path}")
+        sys.exit(1)
+    if args.ocr_psm <= 0:
+        print("❌ `--ocr-psm` 必須大於 0")
+        sys.exit(1)
+    if args.ocr_dpi <= 0:
+        print("❌ `--ocr-dpi` 必須大於 0")
         sys.exit(1)
 
-    source_type = detect_source_type(pdf_path)
+    source_type = detect_source_type(source_path)
 
     # 設定輸出目錄
     project_root = Path(__file__).parent.parent
     output_dir = project_root / "data" / "markdown"
     output_dir.mkdir(parents=True, exist_ok=True)
     strategy = resolve_page_text_strategy(
-        pdf_path,
+        source_path,
         project_root,
         requested_engine=args.page_text_engine,
         requested_layout=args.layout_profile,
     )
 
-    print(f"\n📄 處理: {pdf_path.name} ({source_type.upper()})")
+    print(f"\n📄 處理: {source_path.name} ({source_type.upper()})")
     print(
         f"🧭 分頁引擎: {strategy['page_text_engine']} "
         f"（來源: {strategy['page_text_engine_source']}）"
@@ -531,23 +652,46 @@ def main():
             print(f"   文字品質探測：PyMuPDF 版面噪訊偏高，改用 markitdown（{', '.join(noisy_pages[:8])}）")
     print("-" * 50)
 
-    if args.skip_full_markitdown:
-        print("↷ 已略過整本 markitdown 提取")
+    source_label = str(strategy["page_text_engine"])
+    page_texts: list[str] = []
+    if source_type in {"image", "image-dir"} or strategy["page_text_engine"] == "ocr":
+        pages_output, page_texts = extract_with_ocr_pages(
+            source_path,
+            output_dir,
+            ocr_lang=args.ocr_lang,
+            ocr_psm=args.ocr_psm,
+            ocr_dpi=args.ocr_dpi,
+        )
+        if pages_output is None:
+            sys.exit(1)
+        if args.skip_full_markitdown:
+            print("↷ 已略過整本 Markdown 輸出")
+        else:
+            write_full_markdown(
+                output_dir / f"{build_output_stem(source_path, source_type)}.md",
+                page_texts,
+                source_label=source_label,
+            )
     else:
-        extract_with_markitdown(pdf_path, output_dir)
+        if args.skip_full_markitdown:
+            print("↷ 已略過整本 markitdown 提取")
+        else:
+            extract_with_markitdown(source_path, output_dir)
 
-    extract_with_pages(
-        pdf_path,
-        output_dir,
-        page_text_engine=strategy["page_text_engine"],
-    )
+        extract_with_pages(
+            source_path,
+            output_dir,
+            page_text_engine=strategy["page_text_engine"],
+        )
 
     include_images = args.include_images
     if include_images is None:
         include_images = prompt_include_images()
 
-    if include_images:
-        extract_images(pdf_path, output_dir)
+    if include_images and source_type in {"image", "image-dir"}:
+        print("↷ 圖片來源本身不做額外圖片提取")
+    elif include_images:
+        extract_images(source_path, output_dir)
     else:
         print("↷ 已略過圖片提取")
 

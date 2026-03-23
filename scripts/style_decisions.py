@@ -293,7 +293,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_format = sub.add_parser("set-document-format", help="Update document format decisions.")
     p_format.add_argument("--document-key")
     p_format.add_argument("--layout-profile", choices=("auto", "single-column", "double-column"))
-    p_format.add_argument("--page-text-engine", choices=("auto", "pymupdf", "markitdown"))
+    p_format.add_argument("--page-text-engine", choices=("auto", "ocr", "pymupdf", "markitdown"))
     p_format.add_argument("--aside-note")
     p_format.add_argument("--aside-tip")
     p_format.add_argument("--aside-caution")

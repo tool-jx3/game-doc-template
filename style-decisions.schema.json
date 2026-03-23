@@ -97,7 +97,7 @@
       "additionalProperties": false,
       "properties": {
         "layout_profile": { "enum": ["auto", "single-column", "double-column"] },
-        "page_text_engine": { "enum": ["auto", "pymupdf", "markitdown"] },
+        "page_text_engine": { "enum": ["auto", "ocr", "pymupdf", "markitdown"] },
         "aside_mapping": {
           "type": "object",
           "additionalProperties": false,
@@ -199,7 +199,7 @@
       "additionalProperties": false,
       "properties": {
         "layout_profile": { "enum": ["auto", "single-column", "double-column"] },
-        "page_text_engine": { "enum": ["auto", "pymupdf", "markitdown"] },
+        "page_text_engine": { "enum": ["auto", "ocr", "pymupdf", "markitdown"] },
         "aside_mapping": {
           "type": "object",
           "additionalProperties": false,

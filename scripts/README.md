@@ -21,6 +21,28 @@ uv run python -m spacy download en_core_web_sm
 pip install markitdown pymupdf
 ```
 
+若要使用 OCR，還需要系統層級安裝 `tesseract` 與對應語言資料。
+以 macOS + Homebrew 為例：
+
+```bash
+brew install tesseract
+brew install tesseract-lang
+tesseract --list-langs
+```
+
+建議至少確認以下語言資料可用：
+- 繁體中文：`chi_tra`
+- 日文：`jpn`
+- 英文：`eng`
+
+常見 OCR 語言組合：
+- 繁體中文規則書：`--ocr-lang chi_tra+eng`
+- 日文規則書：`--ocr-lang jpn+eng`
+- 英文規則書：`--ocr-lang eng`
+- 多語混排：`--ocr-lang chi_tra+jpn+eng`
+
+預設 OCR 語言是 `chi_tra+eng`。若來源主要是日文或英文，建議明確指定較小的語言集合，通常會比一次開很多語言更穩定。
+
 ## 工作流程
 
 ### 0. 清除範例資料（建議先執行）
@@ -50,6 +72,21 @@ uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --layout-profil
 
 # 雙欄或複雜版面若要直接指定較保守路徑
 uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine markitdown
+
+# 掃描型 PDF 可直接走 OCR
+uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr
+
+# 日文掃描 PDF
+uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr --ocr-lang jpn+eng
+
+# 英文掃描 PDF
+uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr --ocr-lang eng
+
+# 單張圖片 OCR
+uv run python scripts/extract_pdf.py data/scans/page001.jpg
+
+# 整個 jpg/png 掃描資料夾 OCR
+uv run python scripts/extract_pdf.py data/scans/your-rulebook-pages
 ```
 
 輸出：
@@ -61,8 +98,12 @@ uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-eng
 - `_pages.md` 預設使用 `auto`，會先看 `style-decisions.json` 的每文件設定，否則再抽樣頁面偵測雙欄。
 - 偵測結果偏向雙欄時，會用 `markitdown`。
 - 偵測結果偏向單欄時，預設會用 `pymupdf`；但若抽樣文字顯示有明顯版面噪訊（例如大量長空白或側欄文字被混入正文），會自動改用 `markitdown`。
-- 若要手動覆蓋，可指定 `--layout-profile single-column|double-column` 或 `--page-text-engine pymupdf|markitdown`。
+- 若要手動覆蓋，可指定 `--layout-profile single-column|double-column` 或 `--page-text-engine ocr|pymupdf|markitdown`。
 - 若大型 PDF 不需要整本 `your-rulebook.md`，可用 `--skip-full-markitdown` 省掉最慢的一步。
+- 圖片檔與圖片資料夾會固定走 OCR，並自動生成 `.md` 與 `_pages.md`。
+- OCR 預設使用 `chi_tra+eng`。
+- 日文來源建議使用 `--ocr-lang jpn+eng`；英文來源建議使用 `--ocr-lang eng`。
+- 若同頁真的同時混排繁中、日文、英文，可改用 `--ocr-lang chi_tra+jpn+eng`，但仍建議優先使用最小必要語言集合。
 
 每文件設定可寫在 `style-decisions.json`：
 
@@ -74,6 +115,9 @@ uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-eng
       "Household_1.2": {
         "layout_profile": "double-column",
         "page_text_engine": "markitdown"
+      },
+      "ScannedBook": {
+        "page_text_engine": "ocr"
       }
     }
   }
@@ -84,6 +128,7 @@ uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-eng
 - `document_format.layout_profile` 是全域預設。
 - `document_format.documents.<pdf_stem>` 會覆蓋特定文件。
 - `page_text_engine` 可不填；留空時由 `layout_profile` 自動決定。
+- 掃描 PDF 可將 `page_text_engine` 設成 `ocr`。
 
 ### style-decisions 管理
 
@@ -110,6 +155,10 @@ uv run python scripts/style_decisions.py set-document-format \
   --document-key Household_1.2 \
   --layout-profile double-column \
   --page-text-engine markitdown
+
+uv run python scripts/style_decisions.py set-document-format \
+  --document-key ScannedBook \
+  --page-text-engine ocr
 
 # 加入翻譯備註
 uv run python scripts/style_decisions.py add-translation-note \

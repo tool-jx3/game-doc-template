@@ -7,9 +7,11 @@ import pytest
 
 from extract_pdf import (
     build_image_filename,
+    build_output_stem,
     detect_source_type,
     normalize_layout_profile,
     normalize_page_text_engine,
+    write_full_markdown,
 )
 from _epub_lib import should_print_progress
 
@@ -22,6 +24,7 @@ from _epub_lib import should_print_progress
 class TestNormalizePageTextEngine:
     def test_valid_values(self):
         assert normalize_page_text_engine("auto") == "auto"
+        assert normalize_page_text_engine("ocr") == "ocr"
         assert normalize_page_text_engine("pymupdf") == "pymupdf"
         assert normalize_page_text_engine("markitdown") == "markitdown"
 
@@ -100,6 +103,14 @@ class TestDetectSourceType:
     def test_epub_uppercase(self):
         assert detect_source_type(Path("BOOK.EPUB")) == "epub"
 
+    def test_image_file(self):
+        assert detect_source_type(Path("page.JPG")) == "image"
+
+    def test_image_directory(self, tmp_path):
+        (tmp_path / "page2.jpg").write_text("x", encoding="utf-8")
+        (tmp_path / "page10.jpg").write_text("x", encoding="utf-8")
+        assert detect_source_type(tmp_path) == "image-dir"
+
     def test_unsupported_extension(self):
         with pytest.raises(SystemExit):
             detect_source_type(Path("book.docx"))
@@ -155,3 +166,21 @@ class TestBuildImageFilename:
         rect = SimpleNamespace(x0=0.0, y0=0.0, width=50.0, height=50.0)
         result = build_image_filename(1, 0, 0, rect, "png")
         assert result == "page001_img00_occ00_x0_y0_w50_h50.png"
+
+
+class TestBuildOutputStem:
+    def test_file_uses_stem(self):
+        assert build_output_stem(Path("book.pdf"), "pdf") == "book"
+
+    def test_directory_uses_name(self, tmp_path):
+        scan_dir = tmp_path / "scan-pages"
+        scan_dir.mkdir()
+        assert build_output_stem(scan_dir, "image-dir") == "scan-pages"
+
+
+class TestWriteFullMarkdown:
+    def test_skips_empty_pages_and_joins_sections(self, tmp_path):
+        output = tmp_path / "book.md"
+        result = write_full_markdown(output, ["First page", "", "Second page"], "ocr")
+        assert result == output
+        assert output.read_text(encoding="utf-8") == "First page\n\nSecond page\n"
