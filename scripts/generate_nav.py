@@ -33,17 +33,23 @@ def mode_prefix(mode: str) -> str:
     return "bilingual/" if mode == "bilingual" else ""
 
 
-def section_primary_slug(section_slug: str, section: dict, mode: str = "zh_only") -> str:
-    """Return the primary doc slug for a section."""
+def _first_leaf_slug(base_slug: str, section: dict) -> str:
+    """Recursively find the slug of the first leaf node under *section*."""
     files = sorted_files(section)
-    prefix = mode_prefix(mode)
     if not files:
-        return f"{prefix}{section_slug}"
-
-    filename, _config = files[0]
+        return base_slug
+    filename, config = files[0]
+    if "files" in config:
+        return _first_leaf_slug(f"{base_slug}/{filename}", config)
     if filename == "index":
-        return f"{prefix}{section_slug}"
-    return f"{prefix}{section_slug}/{filename}"
+        return base_slug
+    return f"{base_slug}/{filename}"
+
+
+def section_primary_slug(section_slug: str, section: dict, mode: str = "zh_only") -> str:
+    """Return the primary doc slug for a section (recursive for nested files)."""
+    prefix = mode_prefix(mode)
+    return f"{prefix}{_first_leaf_slug(section_slug, section)}"
 
 
 def section_primary_href(section_slug: str, section: dict, mode: str = "zh_only") -> str:
@@ -54,12 +60,12 @@ def section_primary_href(section_slug: str, section: dict, mode: str = "zh_only"
 def first_file_description(section: dict) -> str:
     """Get description from the first leaf file in section (recursive)."""
     for _fname, cfg in sorted_files(section):
-        if "pages" in cfg:
-            desc = cfg.get("description", "")
+        if "files" in cfg:
+            desc = first_file_description(cfg)
             if desc:
                 return desc
-        elif "files" in cfg:
-            desc = first_file_description(cfg)
+        else:
+            desc = cfg.get("description", "")
             if desc:
                 return desc
     return ""
