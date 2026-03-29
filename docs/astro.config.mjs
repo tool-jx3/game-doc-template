@@ -84,27 +84,27 @@ export default defineConfig({
 			// ============================================
 			sidebar: [
 				{
-					label: '簡介',
-					autogenerate: { directory: 'bilingual/introduction' },
+					label: 'Introduction',
+					slug: 'bilingual/introduction',
 				},
 				{
-					label: '玩家角色',
-					autogenerate: { directory: 'bilingual/player-characters' },
+					label: 'Player Characters',
+					slug: 'bilingual/player-characters',
 				},
 				{
-					label: '技能與專長',
+					label: 'Skills & Specialties',
 					autogenerate: { directory: 'bilingual/skills' },
 				},
 				{
-					label: '戰鬥與傷害',
+					label: 'Combat & Damage',
 					autogenerate: { directory: 'bilingual/combat' },
 				},
 				{
-					label: '魔法',
+					label: 'Magic',
 					autogenerate: { directory: 'bilingual/magic' },
 				},
 				{
-					label: '旅行',
+					label: 'Travel',
 					autogenerate: { directory: 'bilingual/travel' },
 				}
 			],

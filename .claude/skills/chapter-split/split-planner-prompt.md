@@ -15,6 +15,8 @@ Task tool (general-purpose):
     - Source pages file: <SOURCE_PAGES_FILE>
     - Draft config output path: <DRAFT_CONFIG_PATH>
     - style-decisions.json (document_format, proper_nouns)
+    - Existing chapters.json and docs tree summary when available
+    - Topology planner output when available
 
     ## Hard Constraints
 
@@ -27,6 +29,9 @@ Task tool (general-purpose):
     - Use contiguous, non-overlapping page ranges derived from TOC boundaries.
     - If splitting is not necessary, produce one section with one `index` file covering full range.
     - When a long chapter needs internal subdivision, prefer nested semantic file paths in `files` (for example `combat/damage`) so output can use subdirectories without changing the top-level section grouping.
+    - Do not create a section with a near-empty `index` file plus a single child page.
+    - If a section would otherwise contain only one real page, prefer that page as the section's primary file and rely on navigation flattening instead of fabricating a one-item menu.
+    - When multiple source files are being planned together, keep the full `chapters_config` balanced across all of them instead of optimizing this source in isolation.
 
     ## Critical: Page Number Mapping
 

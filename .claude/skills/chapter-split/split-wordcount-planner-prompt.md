@@ -29,6 +29,7 @@ Task tool (general-purpose):
     - Below 800 or above 4500 words is allowed only with explicit TOC-based reason.
     - Keep config compatible with `scripts/split_chapters.py`.
     - Do not ask user whether to split.
+    - Avoid keeping a section topology that would render as a one-item sidebar menu unless it is intentionally a direct-link singleton.
 
     ## Heading-Level Constraint (Critical)
 
@@ -42,6 +43,8 @@ Task tool (general-purpose):
     When two or more adjacent files share a parent section AND their combined word
     count is ≤ 3500, STRONGLY prefer merging them into one file. A merged file
     with 2500 words is better than two separate files with 800 words each.
+    If one of those files is only a thin landing page for the other, collapse the
+    topology instead of preserving a one-child section.
 
     ## File Slug Policy
 

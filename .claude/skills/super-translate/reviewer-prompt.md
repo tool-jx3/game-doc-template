@@ -4,6 +4,8 @@ Use this template when dispatching the reviewer subagent.
 
 **Purpose:** Verify source fidelity and translation quality in a single pass.
 
+**Boundary:** Markdown structure and style compliance run in a separate `md-review` gate.
+
 **Note:** All context is inlined by the orchestrator. Do not read any files yourself.
 
 ```text

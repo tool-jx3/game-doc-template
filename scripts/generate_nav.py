@@ -24,10 +24,36 @@ def sorted_sections(chapters: dict) -> list[tuple[str, dict]]:
     return sorted(chapters.items(), key=lambda x: x[1].get("order", 9999))
 
 
+def sorted_files(section: dict) -> list[tuple[str, dict]]:
+    """Return files in a section sorted by order."""
+    return sorted(section.get("files", {}).items(), key=lambda x: x[1].get("order", 9999))
+
+
+def mode_prefix(mode: str) -> str:
+    return "bilingual/" if mode == "bilingual" else ""
+
+
+def section_primary_slug(section_slug: str, section: dict, mode: str = "zh_only") -> str:
+    """Return the primary doc slug for a section."""
+    files = sorted_files(section)
+    prefix = mode_prefix(mode)
+    if not files:
+        return f"{prefix}{section_slug}"
+
+    filename, _config = files[0]
+    if filename == "index":
+        return f"{prefix}{section_slug}"
+    return f"{prefix}{section_slug}/{filename}"
+
+
+def section_primary_href(section_slug: str, section: dict, mode: str = "zh_only") -> str:
+    """Return the primary doc href for a section."""
+    return f"/{section_primary_slug(section_slug, section, mode)}/"
+
+
 def first_file_description(section: dict) -> str:
     """Get description from the first file in section (usually index)."""
-    files = section.get("files", {})
-    for _fname, cfg in sorted(files.items(), key=lambda x: x[1].get("order", 9999)):
+    for _fname, cfg in sorted_files(section):
         desc = cfg.get("description", "")
         if desc:
             return desc
@@ -68,7 +94,7 @@ def yaml_safe(value: str) -> str:
 
 # --- Index page generation ---
 
-def generate_index(chapters: dict, style: dict) -> str:
+def generate_index(chapters: dict, style: dict, mode: str = "zh_only") -> str:
     sections = sorted_sections(chapters)
     first_slug = sections[0][0] if sections else "reference"
     second_slug = sections[1][0] if len(sections) > 1 else first_slug
@@ -76,6 +102,12 @@ def generate_index(chapters: dict, style: dict) -> str:
     # Hero actions point to first two sections
     first_title = sections[0][1]["title"] if sections else "開始閱讀"
     second_title = sections[1][1]["title"] if len(sections) > 1 else ""
+    first_href = section_primary_href(first_slug, sections[0][1], mode) if sections else "/reference/"
+    second_href = (
+        section_primary_href(second_slug, sections[1][1], mode)
+        if len(sections) > 1
+        else first_href
+    )
 
     site = style.get("site", {})
     title = site.get("title", "遊戲規則文件")
@@ -94,13 +126,13 @@ def generate_index(chapters: dict, style: dict) -> str:
         "    file: ../../assets/hero.jpg",
         "  actions:",
         f"    - text: {yaml_safe(first_title)}",
-        f"      link: /{first_slug}/",
+        f"      link: {first_href}",
         "      icon: right-arrow",
     ]
     if second_title:
         lines += [
             f"    - text: {yaml_safe(second_title)}",
-            f"      link: /{second_slug}/",
+            f"      link: {second_href}",
             "      icon: document",
             "      variant: minimal",
         ]
@@ -123,7 +155,8 @@ def generate_index(chapters: dict, style: dict) -> str:
     for slug, section in sections:
         title = section["title"]
         desc = first_file_description(section)
-        lines.append(f'  <LinkCard title="{title}" href="/{slug}/" description="{desc}" />')
+        href = section_primary_href(slug, section, mode)
+        lines.append(f'  <LinkCard title="{title}" href="{href}" description="{desc}" />')
 
     lines += [
         "</CardGrid>",
@@ -183,7 +216,18 @@ def generate_sidebar_entries(chapters: dict, mode: str = "zh_only") -> str:
     entries = []
     for slug, section in sections:
         title = section["title"]
-        directory = f"bilingual/{slug}" if mode == "bilingual" else slug
+        files = sorted_files(section)
+        if len(files) == 1:
+            primary_slug = section_primary_slug(slug, section, mode)
+            entries.append(
+                f"\t\t\t\t{{\n"
+                f"\t\t\t\t\tlabel: '{title}',\n"
+                f"\t\t\t\t\tslug: '{primary_slug}',\n"
+                f"\t\t\t\t}}"
+            )
+            continue
+
+        directory = f"{mode_prefix(mode)}{slug}"
         entries.append(
             f"\t\t\t\t{{\n"
             f"\t\t\t\t\tlabel: '{title}',\n"
@@ -225,7 +269,7 @@ def main() -> None:
     style = load_json(STYLE_FILE) if STYLE_FILE.exists() else {}
 
     # Generate index.mdx
-    index_content = generate_index(chapters, style)
+    index_content = generate_index(chapters, style, mode=mode)
     INDEX_FILE.parent.mkdir(parents=True, exist_ok=True)
     INDEX_FILE.write_text(index_content, encoding="utf-8")
     print(f"✓ 已產生首頁: {INDEX_FILE}")
