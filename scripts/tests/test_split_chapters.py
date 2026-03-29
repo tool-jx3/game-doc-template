@@ -8,6 +8,7 @@ from split_chapters import (
     get_page_range,
     infer_source_stem,
     build_page_text_stats,
+    normalize_files,
 )
 from pathlib import Path
 
@@ -182,3 +183,59 @@ class TestBuildPageTextStats:
         pages = {1: "Some actual text content here"}
         stats = build_page_text_stats(pages, [])
         assert stats[1]["text_tokens"] > 0
+
+
+# ---------------------------------------------------------------------------
+# normalize_files
+# ---------------------------------------------------------------------------
+
+class TestNormalizeFiles:
+    def test_flat_entry_unchanged(self):
+        files = {"actions": {"title": "Actions", "pages": [5, 7], "order": 0}}
+        result = normalize_files(files)
+        assert result == files
+
+    def test_single_slash_path_becomes_nested(self):
+        files = {"combat/actions": {"title": "Actions", "pages": [5, 7], "order": 0}}
+        result = normalize_files(files)
+        assert "combat" in result
+        assert "files" in result["combat"]
+        assert "actions" in result["combat"]["files"]
+        assert result["combat"]["files"]["actions"]["pages"] == [5, 7]
+        assert result["combat"]["title"] == "combat"
+
+    def test_multi_level_slash_path(self):
+        files = {"a/b/c": {"title": "C", "pages": [1, 2], "order": 0}}
+        result = normalize_files(files)
+        assert "a" in result
+        assert "b" in result["a"]["files"]
+        assert "c" in result["a"]["files"]["b"]["files"]
+
+    def test_multiple_children_same_parent(self):
+        files = {
+            "combat/actions": {"title": "Actions", "pages": [5, 7], "order": 0},
+            "combat/damage": {"title": "Damage", "pages": [8, 10], "order": 1},
+        }
+        result = normalize_files(files)
+        assert "combat" in result
+        assert "actions" in result["combat"]["files"]
+        assert "damage" in result["combat"]["files"]
+
+    def test_mixed_flat_and_slash(self):
+        files = {
+            "index": {"title": "Index", "pages": [1, 4], "order": 0},
+            "combat/actions": {"title": "Actions", "pages": [5, 7], "order": 1},
+        }
+        result = normalize_files(files)
+        assert "index" in result
+        assert "pages" in result["index"]
+        assert "combat" in result
+        assert "files" in result["combat"]
+
+    def test_group_node_has_no_pages(self):
+        files = {"combat/actions": {"title": "Actions", "pages": [5, 7], "order": 0}}
+        result = normalize_files(files)
+        assert "pages" not in result["combat"]
+
+    def test_empty_files(self):
+        assert normalize_files({}) == {}

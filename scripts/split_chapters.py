@@ -198,6 +198,33 @@ def infer_source_stem(source_path: Path) -> str:
     return stem
 
 
+def normalize_files(files: dict) -> dict:
+    """Convert flat slash-path entries into nested recursive structure.
+
+    Entries like ``"combat/actions": {"pages": [5, 7]}`` become nested:
+    ``"combat": {"title": "combat", "files": {"actions": {"pages": [5, 7]}}}``.
+
+    Entries without slashes are kept as-is.  Group nodes created by
+    normalisation get ``title`` set to the raw slug and no ``order``.
+    """
+    result: dict = {}
+    for key, entry in files.items():
+        if "/" in key and "pages" in entry:
+            parts = key.split("/")
+            parent = parts[0]
+            child = "/".join(parts[1:])
+            if parent not in result:
+                result[parent] = {"title": parent, "files": {}}
+            result[parent]["files"][child] = entry
+        else:
+            result[key] = entry
+    # Recurse for multi-level slash paths
+    for key, entry in result.items():
+        if "files" in entry:
+            entry["files"] = normalize_files(entry["files"])
+    return result
+
+
 def load_image_manifest(config: dict, project_root: Path) -> tuple[list[dict], Path | None, dict]:
     """載入圖片 manifest 與設定。"""
     image_config = config.get("images", {})
