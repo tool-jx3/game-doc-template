@@ -1,4 +1,107 @@
 import generate_nav as gn
+from generate_nav import first_file_description, first_leaf_path
+
+
+class TestFirstFileDescriptionRecursive:
+    def test_flat_files(self):
+        section = {
+            "files": {
+                "index": {"order": 0, "description": "Overview", "pages": [1, 1]},
+                "combat": {"order": 1, "description": "Combat rules", "pages": [2, 3]},
+            }
+        }
+        assert first_file_description(section) == "Overview"
+
+    def test_nested_finds_leaf(self):
+        section = {
+            "files": {
+                "combat": {
+                    "order": 0,
+                    "files": {
+                        "actions": {"order": 0, "description": "Action rules", "pages": [1, 2]},
+                    },
+                },
+            }
+        }
+        assert first_file_description(section) == "Action rules"
+
+    def test_empty_files(self):
+        assert first_file_description({"files": {}}) == ""
+
+    def test_no_description_returns_empty(self):
+        section = {"files": {"index": {"order": 0, "pages": [1, 1]}}}
+        assert first_file_description(section) == ""
+
+
+class TestFirstLeafPath:
+    def test_flat_leaf(self):
+        files = {"index": {"order": 0, "pages": [1, 1]}}
+        assert first_leaf_path(files, "/rules") == "/rules/index"
+
+    def test_nested_leaf(self):
+        files = {
+            "combat": {
+                "order": 0,
+                "files": {
+                    "actions": {"order": 0, "pages": [5, 7]},
+                },
+            },
+        }
+        assert first_leaf_path(files, "/rules") == "/rules/combat/actions"
+
+    def test_respects_order(self):
+        files = {
+            "magic": {"order": 2, "pages": [10, 12]},
+            "combat": {"order": 1, "pages": [5, 7]},
+        }
+        assert first_leaf_path(files, "/rules") == "/rules/combat"
+
+    def test_empty_files_returns_prefix(self):
+        assert first_leaf_path({}, "/rules") == "/rules"
+
+
+class TestGenerateIndexNestedLinks:
+    def test_hero_links_resolve_to_first_leaf(self):
+        chapters = {
+            "core-rules": {
+                "title": "Core Rules",
+                "order": 1,
+                "files": {
+                    "combat": {
+                        "title": "Combat",
+                        "order": 0,
+                        "files": {
+                            "actions": {"order": 0, "pages": [5, 7], "description": "Action rules"},
+                        },
+                    },
+                },
+            },
+            "expansion": {
+                "title": "Expansion",
+                "order": 2,
+                "files": {
+                    "new-classes": {"order": 0, "pages": [1, 8], "description": "New classes"},
+                },
+            },
+        }
+        style = {"site": {"title": "Test", "description": "Test site"}}
+        result = gn.generate_index(chapters, style)
+        assert "/core-rules/combat/actions/" in result
+        assert 'href="/core-rules/combat/actions/"' in result
+
+    def test_hero_links_flat_files_unchanged(self):
+        chapters = {
+            "combat": {
+                "title": "Combat",
+                "order": 1,
+                "files": {
+                    "index": {"order": 0, "pages": [1, 2], "description": "Combat rules"},
+                },
+            },
+        }
+        style = {"site": {"title": "Test"}}
+        result = gn.generate_index(chapters, style)
+        assert "/combat/index/" in result or "/combat/" in result
 
 
 class TestGenerateIndex:

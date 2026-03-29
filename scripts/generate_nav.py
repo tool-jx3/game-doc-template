@@ -52,12 +52,29 @@ def section_primary_href(section_slug: str, section: dict, mode: str = "zh_only"
 
 
 def first_file_description(section: dict) -> str:
-    """Get description from the first file in section (usually index)."""
+    """Get description from the first leaf file in section (recursive)."""
     for _fname, cfg in sorted_files(section):
-        desc = cfg.get("description", "")
-        if desc:
-            return desc
+        if "pages" in cfg:
+            desc = cfg.get("description", "")
+            if desc:
+                return desc
+        elif "files" in cfg:
+            desc = first_file_description(cfg)
+            if desc:
+                return desc
     return ""
+
+
+def first_leaf_path(files: dict, path_prefix: str) -> str:
+    """Recursively find the path to the first leaf node (by order)."""
+    for key, entry in sorted(files.items(), key=lambda x: x[1].get("order", 9999)):
+        if "pages" in entry:
+            return f"{path_prefix}/{key}"
+        elif "files" in entry:
+            result = first_leaf_path(entry["files"], f"{path_prefix}/{key}")
+            if result != f"{path_prefix}/{key}":
+                return result
+    return path_prefix
 
 
 def yaml_safe(value: str) -> str:
