@@ -452,76 +452,142 @@ def build_section_content(
     return "\n\n".join(parts).strip(), copied_count
 
 
-def split_chapters(config: dict, project_root: Path):
-    """根據設定拆分章節"""
-    source_path = project_root / config["source"]
-    output_dir = project_root / config["output_dir"]
-    if config.get("mode") == "bilingual":
-        output_dir = output_dir / "bilingual"
-    clean_patterns = config.get("clean_patterns", [])
+_page_cache: dict[str, dict[int, str]] = {}
+_manifest_cache: dict[str, tuple[list[dict], Path | None, dict]] = {}
 
-    if not source_path.exists():
-        print(f"❌ 找不到來源檔案: {source_path}")
-        print("   請先執行 extract_pdf.py 提取 PDF")
-        sys.exit(1)
 
-    print(f"📖 來源檔案: {source_path}")
-    content = source_path.read_text(encoding="utf-8")
-    pages = extract_pages(content)
-    page_text_stats = build_page_text_stats(pages, clean_patterns)
-    manifest_images, manifest_path, image_policy = load_image_manifest(config, project_root)
-    page_images, skipped_images = group_images_by_page(manifest_images, page_text_stats, image_policy)
-    assets_dir = resolve_assets_dir(config, project_root)
-    source_slug = infer_source_stem(Path(config["source"]))
-    print(f"   共 {len(pages)} 頁")
-    if manifest_path is not None:
-        print(f"🖼️  圖片 manifest: {manifest_path}")
-        print(f"   可用圖片 {len(manifest_images)} 張，略過背景候選 {skipped_images} 張")
-    print("-" * 50)
+def _load_pages_cached(source_path: Path) -> dict[int, str]:
+    """Load and cache pages from a _pages.md file."""
+    key = str(source_path)
+    if key not in _page_cache:
+        content = source_path.read_text(encoding="utf-8")
+        _page_cache[key] = extract_pages(content)
+    return _page_cache[key]
 
+
+def _load_manifest_cached(
+    source: str, images_config: dict, project_root: Path
+) -> tuple[list[dict], Path | None, dict]:
+    """Load and cache image manifest for a source."""
+    if source not in _manifest_cache:
+        dummy_config = {"source": source, "images": images_config}
+        _manifest_cache[source] = load_image_manifest(dummy_config, project_root)
+    return _manifest_cache[source]
+
+
+def process_files(
+    files: dict,
+    output_dir: Path,
+    pages: dict[int, str],
+    clean_patterns: list[str],
+    page_images: dict[int, list[dict]],
+    project_root: Path,
+    assets_dir: Path,
+    source_slug: str,
+) -> tuple[int, int]:
+    """Recursively process files dict. Returns (total_files, total_images)."""
     total_files = 0
     total_images = 0
-    for section_name, section_config in config["chapters"].items():
-        section_dir = output_dir / section_name
-        section_dir.mkdir(parents=True, exist_ok=True)
-
-        section_title = section_config.get("title", section_name)
-        print(f"\n📁 {section_title} ({section_name}/)")
-
-        for filename, file_config in section_config["files"].items():
-            title = file_config["title"]
-            description = file_config.get("description", "")
-            page_range = file_config["pages"]
-            order = file_config.get("order")
-
-            start_page, end_page = page_range
-            output_path = section_dir / f"{filename}.md"
+    for key, entry in files.items():
+        if "pages" in entry:
+            # Leaf node — write .md file
+            title = entry["title"]
+            description = entry.get("description", "")
+            order = entry.get("order")
+            start_page, end_page = entry["pages"]
+            output_path = output_dir / f"{key}.md"
             output_path.parent.mkdir(parents=True, exist_ok=True)
             section_content, image_count = build_section_content(
-                pages,
-                start_page,
-                end_page,
-                clean_patterns,
-                page_images,
-                output_path,
-                project_root,
-                assets_dir,
-                source_slug,
+                pages, start_page, end_page, clean_patterns,
+                page_images, output_path, project_root, assets_dir, source_slug,
             )
-
             frontmatter = generate_frontmatter(title, description, order)
             section_content = _strip_duplicate_heading(section_content, title)
             full_content = frontmatter + "\n" + section_content
             output_path.write_text(full_content, encoding="utf-8")
-
             char_count = len(section_content)
             image_note = f", {image_count} 張圖" if image_count else ""
             print(
-                f"   ✓ {filename}.md - {title} "
+                f"   ✓ {key}.md - {title} "
                 f"(p.{start_page}-{end_page}, {char_count:,} 字{image_note})"
             )
             total_files += 1
             total_images += image_count
+        elif "files" in entry:
+            # Group node — create subdirectory + _meta.yml, recurse
+            sub_dir = output_dir / key
+            sub_dir.mkdir(parents=True, exist_ok=True)
+            write_meta_yml(sub_dir, entry)
+            sub_files, sub_images = process_files(
+                entry["files"], sub_dir, pages, clean_patterns,
+                page_images, project_root, assets_dir, source_slug,
+            )
+            total_files += sub_files
+            total_images += sub_images
+        else:
+            raise ValueError(f"Invalid entry '{key}': must have 'pages' or 'files'")
+    return total_files, total_images
+
+
+def split_chapters(config: dict, project_root: Path):
+    """根據設定拆分章節（支援多 source 與遞迴 files）"""
+    output_dir = project_root / config.get("output_dir", "docs/src/content/docs")
+    if config.get("mode") == "bilingual":
+        output_dir = output_dir / "bilingual"
+
+    # Clear caches for fresh run
+    _page_cache.clear()
+    _manifest_cache.clear()
+
+    total_files = 0
+    total_images = 0
+
+    for section_name, section_config in config["chapters"].items():
+        # Resolve per-chapter config with fallback
+        ch_config = resolve_config(section_name, section_config, config)
+        source_path = project_root / ch_config["source"]
+        clean_patterns = ch_config["clean_patterns"]
+        images_config = ch_config["images"]
+
+        if not source_path.exists():
+            print(f"❌ 找不到來源檔案: {source_path}")
+            sys.exit(1)
+
+        # Load pages (cached)
+        pages = _load_pages_cached(source_path)
+
+        # Load images (cached)
+        page_text_stats = build_page_text_stats(pages, clean_patterns)
+        manifest_images, manifest_path, image_policy = _load_manifest_cached(
+            ch_config["source"], images_config, project_root
+        )
+        page_images, skipped = group_images_by_page(
+            manifest_images, page_text_stats, image_policy
+        )
+        assets_dir = resolve_assets_dir(
+            {"output_dir": config.get("output_dir", "docs/src/content/docs"), "images": images_config},
+            project_root,
+        )
+        source_slug = infer_source_stem(Path(ch_config["source"]))
+
+        section_title = section_config.get("title", section_name)
+        print(f"\n📁 {section_title} ({section_name}/) [source: {ch_config['source']}]")
+
+        # Create section directory + _meta.yml
+        section_dir = output_dir / section_name
+        section_dir.mkdir(parents=True, exist_ok=True)
+        write_meta_yml(section_dir, section_config)
+
+        # Normalize flat slash-paths to recursive structure
+        files = normalize_files(section_config.get("files", {}))
+
+        # Process recursively
+        sec_files, sec_images = process_files(
+            files, section_dir, pages, clean_patterns,
+            page_images, project_root, assets_dir, source_slug,
+        )
+        total_files += sec_files
+        total_images += sec_images
 
     print("-" * 50)
     print(f"✅ 完成！共產生 {total_files} 個檔案，插入 {total_images} 張圖片")
