@@ -1577,6 +1577,28 @@ class TestTermLib(unittest.TestCase):
             result = tl.canonical_term_key("  Basic   Moves  ")
         self.assertEqual(result, "Basic Move")
 
+    def test_parse_doc_expands_nlp_max_length_for_large_text(self) -> None:
+        class FakeNLP:
+            def __init__(self) -> None:
+                self.max_length = 1_000_000
+
+            def __call__(self, text: str) -> dict[str, int]:
+                if len(text) > self.max_length:
+                    raise ValueError("text exceeds max_length")
+                return {"length": len(text)}
+
+        large_text = "a" * 1_000_010
+        fake_nlp = FakeNLP()
+        with (
+            patch.object(tl, "SPACY_AVAILABLE", True),
+            patch.object(tl, "get_nlp", return_value=fake_nlp),
+            patch.dict(tl._DOC_CACHE, {}, clear=True),
+        ):
+            doc = tl.parse_doc(large_text)
+
+        self.assertEqual(doc, {"length": len(large_text)})
+        self.assertGreaterEqual(fake_nlp.max_length, len(large_text))
+
     def test_extract_candidates_fallback_without_spacy(self) -> None:
         corpus = {"docs/a.md": "Move move harm move"}
         with patch.object(tl, "SPACY_AVAILABLE", False):

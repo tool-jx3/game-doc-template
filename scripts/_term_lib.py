@@ -212,7 +212,11 @@ def parse_doc(text: str) -> Doc:
     cached = _DOC_CACHE.get(key)
     if cached is not None:
         return cached
-    doc = get_nlp()(text)
+    nlp = get_nlp()
+    required_max_length = len(text) + 1
+    if getattr(nlp, "max_length", 0) < required_max_length:
+        nlp.max_length = required_max_length
+    doc = nlp(text)
     _DOC_CACHE[key] = doc
     return doc
 
