@@ -33,6 +33,11 @@ def parse_args() -> argparse.Namespace:
         metavar="N",
         help="Show next N files to translate (in_progress first, then not_started).",
     )
+    parser.add_argument(
+        "--source",
+        type=str,
+        help="Filter chapters whose source field contains this substring.",
+    )
     return parser.parse_args()
 
 
@@ -52,6 +57,12 @@ def main() -> None:
     data = load_progress(progress_file)
     meta = data.get("_meta", {})
     chapters = data.get("chapters", [])
+
+    if args.source:
+        chapters = [
+            c for c in chapters
+            if args.source in c.get("source", "")
+        ]
 
     # Compute counts
     counts = {"not_started": 0, "in_progress": 0, "completed": 0}
