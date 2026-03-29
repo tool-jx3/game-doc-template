@@ -13,6 +13,11 @@ Decide contested terms, record rationale, apply replacements, and verify consist
 
 **Core principle:** No global replacement without explicit term decision and verification.
 
+## Interaction Rules
+
+- All user interaction and candidate translations must use Traditional Chinese (zh-TW, Taiwan usage).
+- Do not use Simplified Chinese or Hong Kong-specific wording in user-facing text or term candidates.
+
 ## The Process
 
 ### Step 1: Resolve Decision Scope

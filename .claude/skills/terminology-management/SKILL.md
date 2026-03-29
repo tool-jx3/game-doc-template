@@ -11,6 +11,11 @@ Maintain glossary quality and enforce terminology consistency across all transla
 
 **Core principle:** Glossary is the source of truth; validation must run before and after any terminology update.
 
+## Interaction Rules
+
+- All user interaction and term translations must use Traditional Chinese (zh-TW, Taiwan usage).
+- Do not use Simplified Chinese or Hong Kong-specific wording in user-facing text or glossary entries.
+
 ## The Process
 
 ### Step 1: Load Glossary Baseline
