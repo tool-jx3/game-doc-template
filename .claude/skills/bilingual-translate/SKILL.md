@@ -69,7 +69,7 @@ For each target file, determine the source English markdown path from `data/mark
 
 Determine the output path: `docs/src/content/docs/bilingual/<section>/<file>.md` (from `chapters.json` + `mode=bilingual`).
 
-Run bilingual_prep.py to generate the draft with placeholders in `.claude/skills/bilingual-translate/.state/drafts/`:
+Run bilingual_prep.py to generate the draft with placeholders in `.state/bilingual-translate/drafts/`:
 
 ```bash
 uv run python scripts/bilingual_prep.py <SOURCE_FILE> <DRAFT_FILE>

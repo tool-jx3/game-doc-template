@@ -101,7 +101,7 @@ For each target file:
    DRAFT_FILE=$(uv run python scripts/draft.py --skill translate path <TARGET_FILE>)
    ```
    Translate to `$DRAFT_FILE`:
-   - Draft/source mapping is stored in `.claude/skills/translate/.state/draft-manifest.json`; do not add translation metadata to frontmatter
+   - Draft/source mapping is stored in `.state/translate/draft-manifest.json`; do not add translation metadata to frontmatter
    - Traditional Chinese only (Taiwan usage), no Simplified Chinese
    - Preserve markdown structure exactly (frontmatter, headings, lists, tables, links, code blocks)
    - Follow every applicable note in `style-decisions.json.translation_notes`

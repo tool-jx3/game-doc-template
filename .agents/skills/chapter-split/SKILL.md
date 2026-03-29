@@ -44,7 +44,7 @@ Split policy for both planners:
 - If no trustworthy subordinate headings exist, keep the chapter as one file and surface the risk instead of inventing arbitrary numbered splits.
 
 1. Create draft config path:
-   - `.agents/skills/chapter-split/.state/chapters.draft.json`
+   - `.state/chapter-split/chapters.draft.json`
 2. Dispatch toc planner using `./split-planner-prompt.md` to generate TOC-aligned draft `chapters_config`.
 3. Dispatch wordcount planner using `./split-wordcount-planner-prompt.md` to rebalance file granularity based on word count while preserving TOC order.
 4. If wordcount planner reports unresolved critical issues, stop and ask user in Traditional Chinese before writing the final config.

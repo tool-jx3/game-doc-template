@@ -619,10 +619,8 @@ class TestDraftWorkflow(unittest.TestCase):
                 dr.cmd_path("docs/src/content/docs/rules/basic.md", "translate")
             draft = (
                 root
-                / ".claude"
-                / "skills"
-                / "translate"
                 / ".state"
+                / "translate"
                 / "drafts"
                 / "docs"
                 / "src"
@@ -636,10 +634,8 @@ class TestDraftWorkflow(unittest.TestCase):
             manifest = json.loads(
                 (
                     root
-                    / ".claude"
-                    / "skills"
-                    / "translate"
                     / ".state"
+                    / "translate"
                     / "draft-manifest.json"
                 ).read_text(encoding="utf-8")
             )
@@ -651,10 +647,8 @@ class TestDraftWorkflow(unittest.TestCase):
             source = root / "docs" / "src" / "content" / "docs" / "rules" / "basic.md"
             draft = (
                 root
-                / ".claude"
-                / "skills"
-                / "translate"
                 / ".state"
+                / "translate"
                 / "drafts"
                 / "docs"
                 / "src"
@@ -665,7 +659,7 @@ class TestDraftWorkflow(unittest.TestCase):
             )
             draft.parent.mkdir(parents=True, exist_ok=True)
             draft.write_text("---\ntitle: 測試\n---\n內容\n", encoding="utf-8")
-            manifest_path = root / ".claude" / "skills" / "translate" / ".state" / "draft-manifest.json"
+            manifest_path = root / ".state" / "translate" / "draft-manifest.json"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
             manifest_path.write_text(
                 json.dumps(
@@ -673,7 +667,7 @@ class TestDraftWorkflow(unittest.TestCase):
                         "entries": {
                             "docs/src/content/docs/rules/basic.md": {
                                 "source": "docs/src/content/docs/rules/basic.md",
-                                "draft": ".claude/skills/translate/.state/drafts/docs/src/content/docs/rules/basic.md",
+                                "draft": ".state/translate/drafts/docs/src/content/docs/rules/basic.md",
                                 "updated": "2026-03-09T00:00:00+00:00",
                             }
                         }
@@ -700,7 +694,7 @@ class TestDraftWorkflow(unittest.TestCase):
             draft = root / "custom-drafts" / "basic.md"
             draft.parent.mkdir(parents=True, exist_ok=True)
             draft.write_text("內容\n", encoding="utf-8")
-            manifest_path = root / ".claude" / "skills" / "translate" / ".state" / "draft-manifest.json"
+            manifest_path = root / ".state" / "translate" / "draft-manifest.json"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
             manifest_path.write_text(
                 json.dumps(
@@ -729,10 +723,8 @@ class TestDraftWorkflow(unittest.TestCase):
             source = root / "docs" / "src" / "content" / "docs" / "rules" / "basic.md"
             draft = (
                 root
-                / ".claude"
-                / "skills"
-                / "translate"
                 / ".state"
+                / "translate"
                 / "drafts"
                 / "docs"
                 / "src"
@@ -751,7 +743,7 @@ class TestDraftWorkflow(unittest.TestCase):
                 "段落後。\n"
             )
             draft.write_text(expected, encoding="utf-8")
-            manifest_path = root / ".claude" / "skills" / "translate" / ".state" / "draft-manifest.json"
+            manifest_path = root / ".state" / "translate" / "draft-manifest.json"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
             manifest_path.write_text(
                 json.dumps(
@@ -759,7 +751,7 @@ class TestDraftWorkflow(unittest.TestCase):
                         "entries": {
                             "docs/src/content/docs/rules/basic.md": {
                                 "source": "docs/src/content/docs/rules/basic.md",
-                                "draft": ".claude/skills/translate/.state/drafts/docs/src/content/docs/rules/basic.md",
+                                "draft": ".state/translate/drafts/docs/src/content/docs/rules/basic.md",
                                 "updated": "2026-03-09T00:00:00+00:00",
                             }
                         }
@@ -777,10 +769,8 @@ class TestDraftWorkflow(unittest.TestCase):
             root = Path(td)
             draft = (
                 root
-                / ".claude"
-                / "skills"
-                / "translate"
                 / ".state"
+                / "translate"
                 / "drafts"
                 / "docs"
                 / "src"
