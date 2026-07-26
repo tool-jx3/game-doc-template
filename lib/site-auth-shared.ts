@@ -44,13 +44,20 @@ export async function verifyAuthCookieValue(
   return timingSafeEqual(value.slice(dot + 1), await hmacSign(payload, password));
 }
 
-/** 只接受站內相對路徑，阻擋 open redirect（`//evil.com`、絕對網址、反斜線變體）。 */
+/** 只接受站內相對路徑，阻擋 open redirect（`//evil.com`、絕對網址、反斜線變體、控制字元繞過如 `/\t/evil.com`）。 */
 export function sanitizeRedirect(redirect: string | null | undefined): string {
   if (!redirect) return "/";
-  if (!redirect.startsWith("/") || redirect.startsWith("//") || redirect.startsWith("/\\")) {
+  // Strip ASCII C0 control characters (0x00-0x1F, 0x7F) before the prefix
+  // checks below. The WHATWG URL parser strips/ignores tab and newline
+  // characters when resolving a URL, so a payload like "/\t/evil.com"
+  // passes the raw-string prefix checks here but resolves to
+  // "https://evil.com/" once passed through `new URL(redirect, origin)`.
+  // Normalizing first closes that gap.
+  const normalized = redirect.replace(/[\x00-\x1F\x7F]/g, "");
+  if (!normalized.startsWith("/") || normalized.startsWith("//") || normalized.startsWith("/\\")) {
     return "/";
   }
-  return redirect;
+  return normalized;
 }
 
 export function escapeHtml(s: string): string {

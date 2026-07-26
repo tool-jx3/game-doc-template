@@ -23,19 +23,24 @@ export default async function handler(request: Request): Promise<Response> {
 
   if (expected && password === expected) {
     const value = await createAuthCookieValue(expected);
+    const location = new URL(redirect, origin);
+    // Defense in depth: even if sanitizeRedirect has a gap, never issue a
+    // Location header that resolves off-origin.
+    const safeLocation = location.origin === origin ? location : new URL("/", origin);
     return new Response(null, {
       status: 302,
       headers: {
-        Location: new URL(redirect, origin).toString(),
+        Location: safeLocation.toString(),
         "Set-Cookie": `${COOKIE_NAME}=${value}; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE_SECONDS}; Path=/`,
       },
     });
   }
 
   const errorUrl = new URL(redirect, origin);
-  errorUrl.searchParams.set("error", "1");
+  const safeErrorUrl = errorUrl.origin === origin ? errorUrl : new URL("/", origin);
+  safeErrorUrl.searchParams.set("error", "1");
   return new Response(null, {
     status: 302,
-    headers: { Location: errorUrl.toString() },
+    headers: { Location: safeErrorUrl.toString() },
   });
 }
