@@ -8,6 +8,8 @@ import re
 import sys
 from pathlib import Path
 
+from _markdown_utils import yaml_safe
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CHAPTERS_FILE = PROJECT_ROOT / "chapters.json"
 STYLE_FILE = PROJECT_ROOT / "style-decisions.json"
@@ -82,50 +84,6 @@ def first_file_description(section: dict) -> str:
             if desc:
                 return desc
     return ""
-
-
-def first_leaf_path(files: dict, path_prefix: str) -> str:
-    """Recursively find the path to the first leaf node (by order)."""
-    for key, entry in sorted(files.items(), key=lambda x: x[1].get("order", 9999)):
-        if "pages" in entry:
-            return f"{path_prefix}/{key}"
-        elif "files" in entry:
-            result = first_leaf_path(entry["files"], f"{path_prefix}/{key}")
-            if result != f"{path_prefix}/{key}":
-                return result
-    return path_prefix
-
-
-def yaml_safe(value: str) -> str:
-    """Wrap YAML-sensitive scalars in double quotes."""
-    if any(
-        ch in value
-        for ch in (
-            ":",
-            "：",
-            "#",
-            "{",
-            "}",
-            "[",
-            "]",
-            ",",
-            "&",
-            "*",
-            "?",
-            "|",
-            "-",
-            "<",
-            ">",
-            "=",
-            "!",
-            "%",
-            "@",
-            "`",
-        )
-    ):
-        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-        return f'"{escaped}"'
-    return value
 
 
 # --- Index page generation ---

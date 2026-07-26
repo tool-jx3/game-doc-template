@@ -1,5 +1,5 @@
 import generate_nav as gn
-from generate_nav import first_file_description, first_leaf_path
+from generate_nav import first_file_description
 
 
 class TestFirstFileDescriptionRecursive:
@@ -31,33 +31,6 @@ class TestFirstFileDescriptionRecursive:
     def test_no_description_returns_empty(self):
         section = {"files": {"index": {"order": 0, "pages": [1, 1]}}}
         assert first_file_description(section) == ""
-
-
-class TestFirstLeafPath:
-    def test_flat_leaf(self):
-        files = {"index": {"order": 0, "pages": [1, 1]}}
-        assert first_leaf_path(files, "/rules") == "/rules/index"
-
-    def test_nested_leaf(self):
-        files = {
-            "combat": {
-                "order": 0,
-                "files": {
-                    "actions": {"order": 0, "pages": [5, 7]},
-                },
-            },
-        }
-        assert first_leaf_path(files, "/rules") == "/rules/combat/actions"
-
-    def test_respects_order(self):
-        files = {
-            "magic": {"order": 2, "pages": [10, 12]},
-            "combat": {"order": 1, "pages": [5, 7]},
-        }
-        assert first_leaf_path(files, "/rules") == "/rules/combat"
-
-    def test_empty_files_returns_prefix(self):
-        assert first_leaf_path({}, "/rules") == "/rules"
 
 
 class TestGenerateIndexNestedLinks:

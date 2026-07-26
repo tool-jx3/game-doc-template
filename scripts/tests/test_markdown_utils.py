@@ -11,6 +11,7 @@ from _markdown_utils import (
     extract_markdown_image_targets,
     split_markdown_sections,
     strip_markdown_images,
+    yaml_safe,
 )
 
 
@@ -211,3 +212,19 @@ class TestCountPageTextTokens:
 
     def test_single_word(self):
         assert count_page_text_tokens("hello") == 1
+
+
+# ---------------------------------------------------------------------------
+# yaml_safe
+# ---------------------------------------------------------------------------
+
+def test_yaml_safe_quotes_fullwidth_colon():
+    assert yaml_safe("戰鬥：基礎") == '"戰鬥：基礎"'
+
+
+def test_yaml_safe_plain_ascii_untouched():
+    assert yaml_safe("Introduction") == "Introduction"
+
+
+def test_yaml_safe_escapes_quotes_and_backslash():
+    assert yaml_safe('a "b" \\c:') == '"a \\"b\\" \\\\c:"'

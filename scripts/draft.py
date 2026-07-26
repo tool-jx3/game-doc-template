@@ -31,7 +31,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).resolve().parents[1]
 VALID_SKILLS = ("translate", "super-translate")
 _FM_RE = re.compile(r"^---\n(.*?)\n---\n?(.*)", re.DOTALL)
 _H2_SPLIT_RE = re.compile(r"(?=^## )", re.MULTILINE)

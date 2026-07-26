@@ -51,9 +51,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--skip-managed",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
         default=True,
-        help="Skip already-managed (approved/is_term) glossary entries (default: true).",
+        help="Skip already-managed (approved/is_term) glossary entries; use --no-skip-managed to include them.",
     )
     parser.add_argument(
         "--context-limit",

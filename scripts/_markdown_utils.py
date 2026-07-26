@@ -76,3 +76,40 @@ def clean_content(text: str, patterns: list[str]) -> str:
 def count_page_text_tokens(text: str) -> int:
     """估算頁面文字量。"""
     return len(re.findall(r"\S+", text))
+
+
+# ---------------------------------------------------------------------------
+# Functions from generate_nav.py
+# ---------------------------------------------------------------------------
+
+
+def yaml_safe(value: str) -> str:
+    """Wrap YAML-sensitive scalars in double quotes."""
+    if any(
+        ch in value
+        for ch in (
+            ":",
+            "：",
+            "#",
+            "{",
+            "}",
+            "[",
+            "]",
+            ",",
+            "&",
+            "*",
+            "?",
+            "|",
+            "-",
+            "<",
+            ">",
+            "=",
+            "!",
+            "%",
+            "@",
+            "`",
+        )
+    ):
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    return value

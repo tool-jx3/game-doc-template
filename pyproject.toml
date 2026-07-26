@@ -13,11 +13,6 @@ dependencies = [
     "spacy-lookups-data>=1.0.5",
 ]
 
-[project.optional-dependencies]
-opendataloader = [
-    "opendataloader-pdf>=2.0.0",
-]
-
 [tool.uv]
 dev-dependencies = [
     "pytest>=8.0.0",

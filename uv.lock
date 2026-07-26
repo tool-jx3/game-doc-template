@@ -756,11 +756,6 @@ dependencies = [
     { name = "spacy-lookups-data" },
 ]
 
-[package.optional-dependencies]
-opendataloader = [
-    { name = "opendataloader-pdf" },
-]
-
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
@@ -771,13 +766,11 @@ requires-dist = [
     { name = "inflect", specifier = ">=7.5.0" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "markitdown", extras = ["pdf"], specifier = ">=0.1.0" },
-    { name = "opendataloader-pdf", marker = "extra == 'opendataloader'", specifier = ">=2.0.0" },
     { name = "opendataloader-pdf", extras = ["hybrid"], specifier = ">=2.2.0" },
     { name = "pymupdf", specifier = ">=1.24.0" },
     { name = "spacy", specifier = ">=3.8.11" },
     { name = "spacy-lookups-data", specifier = ">=1.0.5" },
 ]
-provides-extras = ["opendataloader"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=8.0.0" }]
