@@ -26,24 +26,32 @@ Announce: "Created 5 tasks. Starting execution..."
 
 ### Step 1: Resolve Scope and Preconditions
 
-1. Verify required files exist:
+1. Resolve translation mode (mode-aware preflight):
+   1. 讀取 `style-decisions.json` 的 `translation_mode.mode`。
+   2. `mode == "bilingual"` 時：進度檔為 `data/translation-progress-bilingual.json`，內容根目錄為 `docs/src/content/docs/bilingual/`；`progress_read.py` 需帶 `--progress-file data/translation-progress-bilingual.json`。
+   3. 其他模式：維持 `data/translation-progress.json` 與 `docs/src/content/docs/`。
+
+   Everywhere below, **the progress file** and **the content root** refer to the values resolved here.
+
+2. Verify required files exist:
    - `glossary.json`
    - `style-decisions.json`
-   - `data/translation-progress.json`
+   - the progress file
    If any are missing, stop and ask user to run `/init-doc` first.
 
-2. Default scope: `docs/src/content/docs/**/*.md`
+3. Default scope: `<content root>**/*.md`
    If `$ARGUMENTS` specifies a narrower path, restrict scope accordingly.
 
-3. Load translation progress:
+4. Load translation progress:
    ```bash
-   uv run python scripts/progress_read.py --json
+   uv run python scripts/progress_read.py --json --progress-file <progress file>
    ```
+   (Omit `--progress-file` only when the progress file is the default `data/translation-progress.json`; `progress_read.py` falls back to it automatically.)
    Identify:
    - Files with status `completed` — primary audit targets.
    - Files with status `not_started` or `in_progress` — flag as incomplete, exclude from Gates 2–3 unless user asks to include them.
 
-**Verification:** Scope resolved; progress data loaded.
+**Verification:** Mode resolved; scope resolved against the content root; progress data loaded from the progress file.
 
 ### Gate 1: Frontmatter & Site Config Completeness Check
 
@@ -86,7 +94,7 @@ For each file in scope:
 1. **Duplicate headings:** Check for identical heading text at the same level within a file. Report duplicates.
 2. **Heading hierarchy violations:** Detect heading level skips (e.g., H2 → H4). Report each violation with file and line.
 3. **Orphan content blocks:** Check for English prose in body text (outside code blocks, dice notation, proper nouns approved in glossary). Any untranslated body text → **FAIL**.
-4. **Broken internal links:** For each Markdown link matching `/...` pattern, confirm the target route exists under `docs/src/content/docs/`. Report broken links.
+4. **Broken internal links:** For each Markdown link matching `/...` pattern, confirm the target route exists under the content root. Report broken links.
 5. **Image path validity:** For each image reference, confirm the file exists at the resolved path. Report missing images.
 6. **Frontmatter title restated as body heading:** If the body contains an H1 (`#`) that matches `frontmatter.title`, report it as a violation.
 
