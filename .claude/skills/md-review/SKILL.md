@@ -45,7 +45,7 @@ Check and report:
    - balanced `---` delimiters
    - YAML is parseable
    - `title` and `description` exist and are non-empty
-   - `sidebar.order` exists when the page is meant to appear in sidebar navigation
+   - 側欄順序由 `_meta.yml` 驅動；頁面**不需要** `sidebar.order`，僅在刻意覆蓋自動排序時才應出現
 2. Heading rules:
    - no body H1 when `frontmatter.title` already provides the title
    - no heading of any level that simply restates `frontmatter.title`

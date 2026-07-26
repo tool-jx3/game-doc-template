@@ -23,6 +23,11 @@ PROGRESS_GLOB_DIR = PROJECT_ROOT / "data"
 ASTRO_CONFIG = PROJECT_ROOT / "docs" / "astro.config.mjs"
 INDEX_MDX = PROJECT_ROOT / "docs" / "src" / "content" / "docs" / "index.mdx"
 PLANS_DIR = PROJECT_ROOT / "plans"
+# Generated docs content that a reset must remove. `_meta.yml` is written by
+# split_chapters.write_meta_yml and consumed by starlight-auto-sidebar: leaving
+# it behind keeps stale ordering/labels and keeps section dirs non-empty.
+DOCS_CONTENT_SUFFIXES = {".md", ".mdx"}
+DOCS_CONTENT_FILENAMES = {"_meta.yml", "_meta.yaml"}
 
 CHAPTERS_PLACEHOLDER = {
     "source": "data/markdown/YOUR-RULEBOOK_pages.md",
@@ -98,7 +103,10 @@ def clean_docs_content(apply: bool) -> None:
     for path in sorted(DOCS_CONTENT_DIR.rglob("*")):
         if path.is_dir():
             continue
-        if path.suffix.lower() not in {".md", ".mdx"}:
+        if (
+            path.suffix.lower() not in DOCS_CONTENT_SUFFIXES
+            and path.name.lower() not in DOCS_CONTENT_FILENAMES
+        ):
             continue
         remove_path(path, apply)
 

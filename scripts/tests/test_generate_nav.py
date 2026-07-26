@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import pytest
+
 import generate_nav as gn
 from generate_nav import first_file_description
 
@@ -217,3 +221,124 @@ class TestGenerateSidebarEntries:
         assert "label: '核心規則'" in result
         assert "autogenerate: { directory: 'core' }" in result
         assert "slug: 'core/combat/actions'" not in result
+
+
+SAMPLE_CHAPTERS = {
+    "introduction": {
+        "title": "簡介",
+        "order": 1,
+        "files": {"index": {"title": "簡介", "order": 0, "description": "簡介說明"}},
+    },
+    "combat": {
+        "title": "戰鬥",
+        "order": 2,
+        "files": {
+            "maps-and-zones": {"title": "地圖與區域", "order": 0, "description": "地圖規則"},
+            "actions": {"title": "行動", "order": 1, "description": "行動規則"},
+        },
+    },
+}
+
+
+class TestGenerateIndexHeroImage:
+    """Starlight resolves hero.image.file through Astro's image() helper, so the
+    key must only appear when the asset is actually on disk."""
+
+    def test_omits_image_block_when_hero_asset_missing(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(gn, "HERO_IMAGE", tmp_path / "assets" / "hero.jpg")
+
+        result = gn.generate_index(SAMPLE_CHAPTERS, {})
+
+        assert "image:" not in result
+        assert "hero.jpg" not in result
+        assert "hero:" in result
+        assert "  actions:" in result
+
+    def test_emits_image_block_when_hero_asset_present(self, monkeypatch, tmp_path):
+        hero = tmp_path / "assets" / "hero.jpg"
+        hero.parent.mkdir(parents=True)
+        hero.write_bytes(b"\xff\xd8\xff\xe0")
+        monkeypatch.setattr(gn, "HERO_IMAGE", hero)
+
+        result = gn.generate_index(SAMPLE_CHAPTERS, {})
+
+        assert "  image:\n    file: ../../assets/hero.jpg\n" in result
+
+
+COLLAPSED_CONFIG = (
+    "export default defineConfig({\n"
+    "\tintegrations: [\n"
+    "\t\tstarlight({\n"
+    "\t\t\ttitle: SITE_CONFIG.title,\n"
+    "\t\t\tsidebar: [],\n"
+    "\t\t\tplugins: [starlightAutoSidebar()],\n"
+    "\t\t\tcustomCss: ['./src/styles/custom.css'],\n"
+    "\t\t}),\n"
+    "\t],\n"
+    "});\n"
+)
+
+POPULATED_CONFIG = (
+    "export default defineConfig({\n"
+    "\tintegrations: [\n"
+    "\t\tstarlight({\n"
+    "\t\t\ttitle: SITE_CONFIG.title,\n"
+    "\t\t\tsidebar: [\n"
+    "\t\t\t\t{\n"
+    "\t\t\t\t\tlabel: '舊章節',\n"
+    "\t\t\t\t\tautogenerate: { directory: 'legacy' },\n"
+    "\t\t\t\t},\n"
+    "\t\t\t],\n"
+    "\t\t\tplugins: [starlightAutoSidebar()],\n"
+    "\t\t\tcustomCss: ['./src/styles/custom.css'],\n"
+    "\t\t}),\n"
+    "\t],\n"
+    "});\n"
+)
+
+
+def _assert_sidebar_patched(result: str) -> None:
+    assert "label: '簡介'" in result
+    assert "slug: 'introduction'" in result
+    assert "autogenerate: { directory: 'combat' }" in result
+    # The match must stop at the sidebar array's own `],`.
+    assert "plugins: [starlightAutoSidebar()]," in result
+    assert "customCss: ['./src/styles/custom.css']," in result
+    assert result.rstrip().endswith("});")
+    assert result.count("integrations: [") == 1
+
+
+class TestUpdateAstroSidebar:
+    def test_patches_collapsed_empty_sidebar(self):
+        result = gn.update_astro_sidebar(COLLAPSED_CONFIG, SAMPLE_CHAPTERS)
+
+        assert result != COLLAPSED_CONFIG
+        assert "sidebar: []," not in result
+        _assert_sidebar_patched(result)
+
+    def test_patches_populated_multiline_sidebar(self):
+        result = gn.update_astro_sidebar(POPULATED_CONFIG, SAMPLE_CHAPTERS)
+
+        assert "legacy" not in result
+        _assert_sidebar_patched(result)
+
+    def test_patches_shipped_astro_config(self):
+        """The blank-template config that ships in this repo must be patchable."""
+        config_text = gn.ASTRO_CONFIG.read_text(encoding="utf-8")
+
+        result = gn.update_astro_sidebar(config_text, SAMPLE_CHAPTERS)
+
+        assert result != config_text
+        _assert_sidebar_patched(result)
+
+    def test_result_is_idempotent(self):
+        once = gn.update_astro_sidebar(COLLAPSED_CONFIG, SAMPLE_CHAPTERS)
+        twice = gn.update_astro_sidebar(once, SAMPLE_CHAPTERS)
+
+        assert once == twice
+
+    def test_missing_sidebar_fails_loudly(self):
+        config_text = "export default defineConfig({\n\tintegrations: [],\n});\n"
+
+        with pytest.raises(gn.SidebarPatchError):
+            gn.update_astro_sidebar(config_text, SAMPLE_CHAPTERS)

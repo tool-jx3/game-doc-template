@@ -121,7 +121,7 @@ def test_clean_markdown_data_keeps_only_gitkeep(monkeypatch, tmp_path):
     assert not images.exists()
 
 
-def test_clean_docs_content_only_removes_md_and_mdx(monkeypatch, tmp_path):
+def test_clean_docs_content_removes_generated_content_only(monkeypatch, tmp_path):
     _patch_paths(monkeypatch, tmp_path)
     docs_dir = tmp_path / "docs" / "src" / "content" / "docs"
     docs_dir.mkdir(parents=True)
@@ -134,6 +134,26 @@ def test_clean_docs_content_only_removes_md_and_mdx(monkeypatch, tmp_path):
     assert not (docs_dir / "a.md").exists()
     assert not (docs_dir / "b.mdx").exists()
     assert (docs_dir / "c.txt").exists()
+
+
+def test_clean_docs_content_removes_meta_yml_and_empty_dirs(monkeypatch, tmp_path):
+    """`_meta.yml` drives starlight-auto-sidebar; leftovers keep stale nav data
+    and keep section dirs non-empty so the empty-dir sweep skips them."""
+    _patch_paths(monkeypatch, tmp_path)
+    docs_dir = tmp_path / "docs" / "src" / "content" / "docs"
+    section = docs_dir / "combat"
+    group = section / "actions"
+    group.mkdir(parents=True)
+    (section / "_meta.yml").write_text("label: 戰鬥\n", encoding="utf-8")
+    (group / "_meta.yaml").write_text("label: 行動\n", encoding="utf-8")
+    (group / "index.md").write_text("x", encoding="utf-8")
+
+    csd.clean_docs_content(apply=True)
+
+    assert not (section / "_meta.yml").exists()
+    assert not (group / "_meta.yaml").exists()
+    assert not group.exists()
+    assert not section.exists()
 
 
 def test_clean_glossary_resets_to_meta_only(monkeypatch, tmp_path):

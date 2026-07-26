@@ -1,0 +1,11 @@
+description = "術語互動技能：建立、編輯、驗證與強制套用術語表（映射到 terminology-management skill）"
+prompt = """
+Use the `terminology-management` skill from workspace skills at `.gemini/skills/terminology-management/SKILL.md`.
+Follow that skill exactly end-to-end.
+
+User arguments: {{args}}
+
+Requirements:
+- Interact with user in Traditional Chinese.
+- Never edit glossary.json by hand; use the term_*.py scripts declared in the skill.
+"""

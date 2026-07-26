@@ -84,6 +84,8 @@ Scripts (run from project root):
 - Read consistency report   : uv run python scripts/term_read.py
 - Batch-calc evidence       : uv run python scripts/term_cal_batch.py
 - Update progress           : uv run python scripts/progress_edit.py --file <path> --status <status>
+- Read progress report      : uv run python scripts/progress_read.py
+- Manage translation drafts : uv run python scripts/draft.py --skill <skill> <path|chunk-path|writeback|clean> [source]
 - Record style decision     : uv run python scripts/style_decisions.py <subcommand>
 
 Rules: always run term_read.py before translating; approve new terms before use.
