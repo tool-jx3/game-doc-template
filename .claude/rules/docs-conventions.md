@@ -15,12 +15,12 @@ paths:
 ## Frontmatter Structure
 
 - MUST include Traditional Chinese `title` and `description`
-- MUST include `sidebar: order:` for navigation positioning
+- 側欄順序由 `split_chapters.py` 產生的 `_meta.yml` 驅動（starlight-auto-sidebar）；個別頁面**不需要** `sidebar.order`，僅在需要覆蓋自動排序時使用。
 - NEVER skip frontmatter structure
 
 ## Markdown Formatting
 
-- MUST reserve H1 for title (from frontmatter)
+- 頁面標題僅由 frontmatter `title` 提供；**正文禁止**出現任何重複 frontmatter 標題的標題（含 H1）。
 - MUST use H2 for main sections, H3 for subsections
 - NEVER skip heading levels (H2 → H4)
 - MUST use absolute paths from docs root for internal links: `/rules/combat/`

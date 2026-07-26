@@ -71,7 +71,8 @@ Check and report:
 
 Check and report:
 
-1. Chinese prose uses Traditional Chinese punctuation.
+1. Chinese prose uses Traditional Chinese punctuation:
+   - Ellipsis must use `……`, never `...`
 2. Simplified Chinese must not appear.
 3. Every applicable rule in `style-decisions.json.translation_notes` is followed.
 4. No invented overview heading or title-repeat heading appears.
