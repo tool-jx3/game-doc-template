@@ -1,15 +1,6 @@
-const PASSWORD = process.env.SITE_PASSWORD || "";
-const COOKIE_NAME = "site_auth";
+import { COOKIE_NAME, escapeHtml, verifyAuthCookieValue } from "./lib/site-auth-shared";
 
-function hashPassword(pass: string): string {
-  let hash = 0;
-  for (let i = 0; i < pass.length; i++) {
-    const char = pass.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash).toString(36);
-}
+const PASSWORD = process.env.SITE_PASSWORD || "";
 
 function getCookie(cookieHeader: string | null, name: string): string | null {
   if (!cookieHeader) return null;
@@ -74,7 +65,7 @@ function getLoginHTML(redirectPath: string, error: boolean) {
     <h1>請輸入密碼</h1>
     ${error ? '<p class="error">密碼錯誤</p>' : ''}
     <form method="POST" action="/api/site-auth">
-      <input type="hidden" name="redirect" value="${redirectPath}" />
+      <input type="hidden" name="redirect" value="${escapeHtml(redirectPath)}" />
       <input type="password" name="password" placeholder="密碼" autofocus required />
       <button type="submit">進入</button>
     </form>
@@ -99,7 +90,7 @@ function isSocialCrawler(userAgent: string | null): boolean {
   return SOCIAL_CRAWLERS.some((pattern) => pattern.test(userAgent));
 }
 
-export default function middleware(request: Request) {
+export default async function middleware(request: Request) {
   // Skip if no password configured
   if (!PASSWORD) {
     return;
@@ -121,9 +112,7 @@ export default function middleware(request: Request) {
 
   const cookieHeader = request.headers.get("cookie");
   const authCookie = getCookie(cookieHeader, COOKIE_NAME);
-  const expectedHash = hashPassword(PASSWORD);
-
-  if (authCookie === expectedHash) {
+  if (await verifyAuthCookieValue(authCookie, PASSWORD)) {
     return;
   }
 

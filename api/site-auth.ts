@@ -1,49 +1,41 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import {
+  COOKIE_NAME,
+  MAX_AGE_SECONDS,
+  createAuthCookieValue,
+  sanitizeRedirect,
+} from "../lib/site-auth-shared";
 
-const PASSWORD = process.env.SITE_PASSWORD || "";
-const COOKIE_NAME = "site_auth";
+export const config = { runtime: "edge" };
 
-function hashPassword(pass: string): string {
-  let hash = 0;
-  for (let i = 0; i < pass.length; i++) {
-    const char = pass.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash).toString(36);
-}
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+export default async function handler(request: Request): Promise<Response> {
+  if (request.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
-  const body = req.body as Record<string, string> | string;
-  let password = "";
-  let redirect = "/";
+  const form = await request.formData();
+  const password = String(form.get("password") ?? "");
+  const redirect = sanitizeRedirect(String(form.get("redirect") ?? "/"));
+  const expected = process.env.SITE_PASSWORD || "";
+  const origin = new URL(request.url).origin;
 
-  if (typeof body === "string") {
-    const params = new URLSearchParams(body);
-    password = params.get("password") || "";
-    redirect = params.get("redirect") || "/";
-  } else if (body) {
-    password = body.password || "";
-    redirect = body.redirect || "/";
+  if (expected && password === expected) {
+    const value = await createAuthCookieValue(expected);
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: new URL(redirect, origin).toString(),
+        "Set-Cookie": `${COOKIE_NAME}=${value}; HttpOnly; Secure; SameSite=Lax; Max-Age=${MAX_AGE_SECONDS}; Path=/`,
+      },
+    });
   }
 
-  if (password === PASSWORD) {
-    const hash = hashPassword(PASSWORD);
-    res.setHeader(
-      "Set-Cookie",
-      `${COOKIE_NAME}=${hash}; HttpOnly; Secure; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}; Path=/`
-    );
-    res.setHeader("Location", redirect);
-    return res.status(302).end();
-  }
-
-  // Wrong password
-  const errorUrl = new URL(redirect, `https://${req.headers.host}`);
+  const errorUrl = new URL(redirect, origin);
   errorUrl.searchParams.set("error", "1");
-  res.setHeader("Location", errorUrl.toString());
-  return res.status(302).end();
+  return new Response(null, {
+    status: 302,
+    headers: { Location: errorUrl.toString() },
+  });
 }
