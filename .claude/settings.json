@@ -14,22 +14,12 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/permission-check.py",
-            "timeout": 30
-          }
-        ]
-      },
-      {
         "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pytest-check.py",
-            "timeout": 20
+            "command": "uv run python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pytest-check.py\"",
+            "timeout": 60
           }
         ]
       }
