@@ -63,7 +63,7 @@ Check the following files for untranslated English (proper nouns in `glossary.js
 
 1. **`docs/astro.config.mjs`** — sidebar `label` values:
    - Each sidebar group `label` must be in Traditional Chinese → untranslated English **FAIL**
-2. **`docs/src/content/docs/index.mdx`** (or `index.md`) — homepage elements:
+2. **`docs/src/content/docs/index.mdx`** (or `index.md`) — 全站首頁，與翻譯模式無關，固定於此路徑（不隨 Step 1 解析出的 content root 變動）— homepage elements:
    - Hero `actions[].text` values → untranslated English **FAIL**
    - `<LinkCard>` / `<Card>` `title` attributes → untranslated English **FAIL**
    - `<LinkCard>` / `<Card>` `description` attributes → untranslated English **WARN**
