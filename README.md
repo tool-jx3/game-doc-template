@@ -170,7 +170,7 @@ super-translate [target]
    執行 `init-doc` 建立可翻譯的初始內容。若之後來源更新或章節結構要重切，改用 `chapter-split` 重建 `chapters.json` 與導覽。
 
 3. 提取 PDF 與章節裁切（Python）  
-   預設引擎為 `opendataloader-pdf`（自動偵測；需 Java 11 以上，無 Java 時自動退回 `pymupdf`/`markitdown`）。
+   預設引擎為 `opendataloader-pdf`（自動偵測；需 Java 11 以上，無 Java 時自動退回 `pymupdf`／`markitdown`）。
    1. `uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf`
    2. 若是掃描 PDF，可改用 `uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr`
    3. 日文掃描來源建議加 `--ocr-lang jpn+eng`；英文掃描來源建議加 `--ocr-lang eng`

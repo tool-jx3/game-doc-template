@@ -45,7 +45,7 @@ tesseract --list-langs
 
 ### 系統依賴
 
-- **Java 11+**：`opendataloader-pdf`（預設 PDF 提取引擎）需要 Java 11 以上執行環境；未安裝 Java 時 `extract_pdf.py` 會自動退回 `pymupdf`/`markitdown`。
+- **Java 11+**：`opendataloader-pdf`（預設 PDF 提取引擎）需要 Java 11 以上執行環境；未安裝 Java 時 `extract_pdf.py` 會自動退回 `pymupdf`／`markitdown`。
 - **tesseract + `chi_tra` 語言包**：OCR 模式（`--page-text-engine ocr`）需要系統安裝 tesseract，並確認 `chi_tra`（視來源語言可再加裝 `jpn`、`eng`）語言資料可用。
 - **bun**：`init_handoff_gate.py` 預設會在 `docs/` 目錄執行 `bun run build`，作為 init-doc 交接前的其中一道守門檢查；可用 `--skip-docs-build` 略過。
 
@@ -170,10 +170,10 @@ uv run python scripts/extract_pdf.py data/scans/your-rulebook-pages
 - `data/markdown/images/your-rulebook/` — 提取的圖片
 
 說明：
-- `_pages.md` 預設使用 `auto`，會先看 `style-decisions.json` 的每文件設定，否則再抽樣頁面偵測雙欄。
-- 偵測結果偏向雙欄時，會用 `markitdown`。
-- 偵測結果偏向單欄時，預設會用 `pymupdf`；但若抽樣文字顯示有明顯版面噪訊（例如大量長空白或側欄文字被混入正文），會自動改用 `markitdown`。
-- 若要手動覆蓋，可指定 `--layout-profile single-column|double-column` 或 `--page-text-engine ocr|pymupdf|markitdown`。
+- `_pages.md` 預設使用 `auto`，會先看 `style-decisions.json` 的每文件設定；若該設定已指定明確引擎，直接採用。
+- 否則優先偵測 `opendataloader-pdf`（需 Java 11 以上）是否可用，可用時直接採用 `opendataloader` 引擎，不再走版面偵測。
+- 只有在 `opendataloader` 不可用時，才會退回抽樣頁面偵測單欄／雙欄：偵測結果偏向雙欄時用 `markitdown`；偏向單欄時預設用 `pymupdf`，但若抽樣文字顯示有明顯版面噪訊（例如大量長空白或側欄文字被混入正文），會自動改用 `markitdown`。
+- 若要手動覆蓋，可指定 `--layout-profile single-column|double-column` 或 `--page-text-engine ocr|pymupdf|markitdown|opendataloader`。
 - 若大型 PDF 不需要整本 `your-rulebook.md`，可用 `--skip-full-markitdown` 省掉最慢的一步。
 - 圖片檔與圖片資料夾會固定走 OCR，並自動生成 `.md` 與 `_pages.md`。
 - OCR 預設使用 `chi_tra+eng`。
