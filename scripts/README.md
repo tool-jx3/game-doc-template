@@ -43,6 +43,67 @@ tesseract --list-langs
 
 預設 OCR 語言是 `chi_tra+eng`。若來源主要是日文或英文，建議明確指定較小的語言集合，通常會比一次開很多語言更穩定。
 
+### 系統依賴
+
+- **Java 11+**：`opendataloader-pdf`（預設 PDF 提取引擎）需要 Java 11 以上執行環境；未安裝 Java 時 `extract_pdf.py` 會自動退回 `pymupdf`/`markitdown`。
+- **tesseract + `chi_tra` 語言包**：OCR 模式（`--page-text-engine ocr`）需要系統安裝 tesseract，並確認 `chi_tra`（視來源語言可再加裝 `jpn`、`eng`）語言資料可用。
+- **bun**：`init_handoff_gate.py` 預設會在 `docs/` 目錄執行 `bun run build`，作為 init-doc 交接前的其中一道守門檢查；可用 `--skip-docs-build` 略過。
+
+## 腳本清單
+
+以下依用途分類列出 `scripts/` 下全部 26 支 `.py` 檔案；檔名以 `_` 開頭者為內部共用庫，不直接執行。
+
+### 提取與章節
+
+| 腳本 | 用途 |
+| --- | --- |
+| `extract_pdf.py` | PDF／EPUB／圖片來源轉 Markdown，支援文字提取、OCR、opendataloader、圖片提取 |
+| `split_chapters.py` | 依 `chapters.json` 設定將 Markdown 拆分為多個章節檔案 |
+| `merge_multi.py` | 合併多份 `chapters_<name>.json` 為單一 `chapters.json` |
+| `generate_nav.py` | 依 `chapters.json` 產生首頁 `index.mdx` 並更新 `astro.config.mjs` 側邊欄 |
+| `clean_sample_data.py` | 清除範本／範例資料，供 `new-project` 自動執行或既有專案手動重置 |
+
+### 術語
+
+| 腳本 | 用途 |
+| --- | --- |
+| `term_generate.py` | 掃描 Markdown 內容，產生高頻候選術語 |
+| `term_edit.py` | 互動式術語編輯（未管理詞彙會自動先執行 `--cal`） |
+| `term_read.py` | 讀取 `glossary.json`，比對文件內容做一致性檢查 |
+| `term_cal_batch.py` | 批次計算所有候選／已管理術語在語料庫中的出現次數 |
+| `validate_glossary.py` | 依 `glossary.schema.json` 驗證 `glossary.json` 格式 |
+
+### 樣式決策
+
+| 腳本 | 用途 |
+| --- | --- |
+| `style_decisions.py` | 透過驗證過的子指令建立與更新 `style-decisions.json` |
+| `validate_style_decisions.py` | 依 `style-decisions.schema.json` 驗證 `style-decisions.json` 格式 |
+
+### 進度與草稿
+
+| 腳本 | 用途 |
+| --- | --- |
+| `init_create_progress.py` | 依 `chapters.json` 建立 `data/translation-progress.json` |
+| `init_handoff_gate.py` | 一次執行 init-doc 交接前的所有守門檢查（含 `bun run build`） |
+| `progress_edit.py` | 更新翻譯進度項目 |
+| `progress_read.py` | 讀取並顯示翻譯進度 |
+| `draft.py` | 管理 `translate`／`super-translate` 的草稿檔（`path`／`chunk-path`／`writeback`／`clean`） |
+| `bilingual_prep.py` | 將來源英文 Markdown 轉換為含佔位符的雙語翻譯草稿 |
+
+### 內部共用庫（`_*.py`，不直接執行）
+
+| 腳本 | 用途 |
+| --- | --- |
+| `_epub_lib.py` | EPUB 解析與提取工具（內部共用庫） |
+| `_image_analysis.py` | 圖片視覺指紋、背景判定與去重工具（內部共用庫） |
+| `_layout_lib.py` | PDF 版面偵測（單／雙欄）與文字品質探測工具（內部共用庫） |
+| `_markdown_utils.py` | Markdown 文字處理共用工具函式（內部共用庫） |
+| `_ocr_lib.py` | 基於 tesseract CLI 的 OCR 工具（內部共用庫） |
+| `_opendataloader_lib.py` | opendataloader-pdf 引擎封裝：可用性偵測、轉換呼叫、頁碼標記後處理（內部共用庫） |
+| `_style_decisions_lib.py` | `style-decisions.json` 管理共用函式（內部共用庫） |
+| `_term_lib.py` | 術語腳本共用函式（內部共用庫） |
+
 ## 工作流程
 
 ### 0. 清除範例資料

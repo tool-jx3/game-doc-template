@@ -101,10 +101,11 @@ const SITE_CONFIG = {
 
 - `AGENTS.md -> CLAUDE.md`
 - `.codex/skills -> .claude/skills`
-- `.codex/agents -> .claude/agents`
 - `.gemini/settings.json`（`context.fileName = "CLAUDE.md"`）
 - `.gemini/skills -> .claude/skills`
 - `.gemini/commands/*.toml`（將 slash 指令映射到既有 skills）
+
+Windows 使用者需啟用 `git config core.symlinks true` 並以系統管理員或開發者模式 clone，`.codex/`、`.gemini/skills` 的 symlink 才會實體化。
 
 ### 使用原則
 
@@ -150,9 +151,13 @@ super-translate [target]
 | 重新切章與重建導覽               | `chapter-split [source]`     |
 | 翻譯章節或檔案                   | `translate [target]`         |
 | 翻譯＋多輪審查（beta）           | `super-translate [target]`   |
+| Markdown 結構與風格檢查          | `md-review [target]`         |
+| 單輪雙語翻譯（中文正文＋英文引用） | `bilingual-translate [target]` |
 | 術語一致性檢查                   | `check-consistency`          |
 | 術語決策與批次替換               | `term-decision`              |
 | 內容完整性檢查                   | `check-completeness`         |
+| 修正頁碼參照為內部連結           | `fix-ref`                    |
+| 出版前最終校對                   | `final-proofread`            |
 
 ---
 
@@ -164,7 +169,8 @@ super-translate [target]
 2. 初始化專案（建議）  
    執行 `init-doc` 建立可翻譯的初始內容。若之後來源更新或章節結構要重切，改用 `chapter-split` 重建 `chapters.json` 與導覽。
 
-3. 提取 PDF 與章節裁切（Python）
+3. 提取 PDF 與章節裁切（Python）  
+   預設引擎為 `opendataloader-pdf`（自動偵測；需 Java 11 以上，無 Java 時自動退回 `pymupdf`/`markitdown`）。
    1. `uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf`
    2. 若是掃描 PDF，可改用 `uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr`
    3. 日文掃描來源建議加 `--ocr-lang jpn+eng`；英文掃描來源建議加 `--ocr-lang eng`
@@ -185,18 +191,24 @@ super-translate [target]
    - `translate`：單輪翻譯，適合快速草稿或已有良好術語表的情況；每個 batch 完成後會自動建立 `progress: X/Y` 進度 commit。
    - `super-translate` (beta)：多 agent 翻譯審查循環，Translator → Reviewer → Refiner 最多迭代 2 輪，自動修正術語不一致、殘留英文、簡體字等問題，適合正式發布前的高品質輸出；每個 batch 完成後會自動建立 `progress: X/Y` 進度 commit。
 
-6. 術語校驗與完整性檢查  
+6. 修正頁碼參照  
+   翻譯完成後執行 `fix-ref`，把「見 12 頁」之類的列印頁碼參照轉換成內部 Markdown 連結。
+
+7. 術語校驗與完整性檢查  
    原則：翻譯後再做一次全站術語稽核，收斂不一致。  
    建議指令：
    1. `uv run python scripts/validate_glossary.py`（檢查術語表格式）
    2. `uv run python scripts/term_read.py`（檢查缺漏詞、禁用詞、未知高頻詞）
    3. `check-completeness`（檢查內容缺頁與規則缺漏）
 
-7. 預覽與調整樣式  
+8. 最終校對  
+   出版前執行 `final-proofread`，依序檢查 frontmatter 完整性、內容完整性、頁碼參照連結三道品質關卡。
+
+9. 預覽與調整樣式  
    在 `docs/` 下執行 `bun dev`，檢查頁面、目錄、連結、圖片與主題樣式。
 
-8. 建置與部署  
-   `bun run build` 後部署到 Vercel（或其他靜態站台服務）。
+10. 建置與部署  
+    `bun run build` 後部署到 Vercel（或其他靜態站台服務）。
 
 ---
 

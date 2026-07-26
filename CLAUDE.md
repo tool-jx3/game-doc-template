@@ -48,7 +48,7 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 - Preserve source meaning and avoid over-localization.
 - Proper noun policy (person/place/org/brand/product names) is user-configurable during `/init-doc`; do not hardcode a single rule.
 - Terminology workflow must reuse `.claude/skills/terminology-management/SKILL.md`.
-- `/init-doc`, `/translate`, and `/super-translate` must run terminology read/consistency checks first.
+- `/init-doc`, `/translate`, `/super-translate`, and `/bilingual-translate` must run terminology read/consistency checks first.
 
 **Law 8: zh-TW Writing Conventions**
 
@@ -78,6 +78,7 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 | `/super-translate`    | Multi-agent translate + review loop (up to 2 iterations) for quality  |
 | `/md-review`          | Check Markdown structure and style compliance for docs or drafts      |
 | `/bilingual-translate` | Single-pass bilingual translate: Chinese primary + English blockquote (no review loop) |
+| `/terminology-management` | Glossary-driven terminology creation, edit, validation, and enforcement |
 | `/check-consistency`  | Validate terminology consistency                                      |
 | `/term-decision`      | Make terminology decisions and batch replace                          |
 | `/check-completeness` | Check for missing rule content                                        |
@@ -86,9 +87,9 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 
 ### Tech Stack
 
-- **Frontend**: Astro 5 + Starlight (bun/npm)
+- **Frontend**: Astro 5 + Starlight + starlight-auto-sidebar (bun/npm)
 - **Scripts**: Python 3.11+ (uv)
-- **PDF Processing**: markitdown, pymupdf
+- **PDF Processing**: markitdown, pymupdf, opendataloader-pdf (default engine, requires Java 11+)
 
 ### Key Paths
 
@@ -110,7 +111,7 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 2. Use `init-doc` skill to complete project-level setup, extraction orchestration, and initial terminology mapping
 3. Use `chapter-split` skill when extracted Markdown needs deterministic chapter/file structuring or re-splitting
 4. Use `term-decision` skill to handle terminology decisions and batch replacements
-5. Use `translate` or `super-translate` skill to translate target chapters or files, and create one simple progress commit after each completed batch (`progress: X/Y`)
+5. Use `translate` or `super-translate` skill (use `bilingual-translate` for bilingual mode) to translate target chapters or files, and create one simple progress commit after each completed batch (`progress: X/Y`)
 6. Use `fix-ref` skill to replace printed page references with internal links
 7. Use `check-consistency` skill to validate terminology and style consistency
 8. Use `check-completeness` skill to check rule content completeness
