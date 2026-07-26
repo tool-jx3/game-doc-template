@@ -13,6 +13,9 @@ def _patch_paths(monkeypatch, tmp_path):
     monkeypatch.setattr(csd, "ASTRO_CONFIG", tmp_path / "docs" / "astro.config.mjs")
     monkeypatch.setattr(csd, "INDEX_MDX", tmp_path / "docs" / "src" / "content" / "docs" / "index.mdx")
     monkeypatch.setattr(csd, "PLANS_DIR", tmp_path / "plans")
+    monkeypatch.setattr(csd, "MARKDOWN_DIR", tmp_path / "data" / "markdown")
+    monkeypatch.setattr(csd, "DOCS_CONTENT_DIR", tmp_path / "docs" / "src" / "content" / "docs")
+    monkeypatch.setattr(csd, "GLOSSARY_PATH", tmp_path / "glossary.json")
 
 
 def test_reset_chapters_writes_placeholder(monkeypatch, tmp_path):
@@ -99,6 +102,57 @@ def test_write_placeholder_index_and_remove_plans(monkeypatch, tmp_path):
     assert index.exists()
     assert "title:" in index.read_text(encoding="utf-8")
     assert not (tmp_path / "plans").exists()
+
+
+def test_clean_markdown_data_keeps_only_gitkeep(monkeypatch, tmp_path):
+    _patch_paths(monkeypatch, tmp_path)
+    markdown_dir = tmp_path / "data" / "markdown"
+    markdown_dir.mkdir(parents=True)
+    (markdown_dir / ".gitkeep").write_text("", encoding="utf-8")
+    (markdown_dir / "a.md").write_text("x", encoding="utf-8")
+    images = markdown_dir / "images"
+    images.mkdir()
+    (images / "i.png").write_text("x", encoding="utf-8")
+
+    csd.clean_markdown_data(apply=True)
+
+    assert (markdown_dir / ".gitkeep").exists()
+    assert not (markdown_dir / "a.md").exists()
+    assert not images.exists()
+
+
+def test_clean_docs_content_only_removes_md_and_mdx(monkeypatch, tmp_path):
+    _patch_paths(monkeypatch, tmp_path)
+    docs_dir = tmp_path / "docs" / "src" / "content" / "docs"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "a.md").write_text("x", encoding="utf-8")
+    (docs_dir / "b.mdx").write_text("x", encoding="utf-8")
+    (docs_dir / "c.txt").write_text("x", encoding="utf-8")
+
+    csd.clean_docs_content(apply=True)
+
+    assert not (docs_dir / "a.md").exists()
+    assert not (docs_dir / "b.mdx").exists()
+    assert (docs_dir / "c.txt").exists()
+
+
+def test_clean_glossary_resets_to_meta_only(monkeypatch, tmp_path):
+    _patch_paths(monkeypatch, tmp_path)
+    glossary = tmp_path / "glossary.json"
+    glossary.write_text(
+        json.dumps(
+            {"_meta": {"description": "custom", "updated": "now"}, "Move": {"zh": "動作"}},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    csd.clean_glossary(apply=True)
+
+    payload = json.loads(glossary.read_text(encoding="utf-8"))
+    assert payload["_meta"]["description"] == "custom"
+    assert payload["_meta"]["updated"] == ""
+    assert set(payload.keys()) == {"_meta"}
 
 
 def test_idempotent_second_run(monkeypatch, tmp_path):
