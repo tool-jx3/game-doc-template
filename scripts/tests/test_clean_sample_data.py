@@ -49,7 +49,7 @@ def test_reset_astro_config_title_and_sidebar(monkeypatch, tmp_path):
     cfg = tmp_path / "docs" / "astro.config.mjs"
     cfg.parent.mkdir(parents=True)
     cfg.write_text(
-        "const SITE_CONFIG = {\n\ttitle: 'Cairn',\n};\n"
+        "const SITE_CONFIG = {\n\ttitle: 'Old Sample Title',\n};\n"
         "export default defineConfig({\n\tsidebar: [\n\t\t{ label: 'X', slug: 'bilingual/x' },\n\t],\n});\n",
         encoding="utf-8",
     )
@@ -58,6 +58,35 @@ def test_reset_astro_config_title_and_sidebar(monkeypatch, tmp_path):
     assert "title: '遊戲規則文件'" in text
     assert "bilingual/x" not in text
     assert "sidebar: []," in text
+
+
+def test_reset_astro_config_idempotent_on_second_run(monkeypatch, tmp_path):
+    _patch_paths(monkeypatch, tmp_path)
+    cfg = tmp_path / "docs" / "astro.config.mjs"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_text(
+        "const SITE_CONFIG = {\n\ttitle: 'Old Sample Title',\n};\n"
+        "export default defineConfig({\n"
+        "\tintegrations: [\n"
+        "\t\tstarlight({\n"
+        "\t\t\tsidebar: [\n\t\t\t\t{ label: 'X', slug: 'bilingual/x' },\n\t\t\t],\n"
+        "\t\t\tplugins: [starlightAutoSidebar()],\n"
+        "\t\t\tcustomCss: ['./src/styles/custom.css'],\n"
+        "\t\t}),\n"
+        "\t],\n"
+        "});\n",
+        encoding="utf-8",
+    )
+    csd.reset_astro_config(apply=True)
+    first_pass = cfg.read_text(encoding="utf-8")
+    assert "sidebar: []," in first_pass
+    assert "plugins: [starlightAutoSidebar()]," in first_pass
+    assert "customCss: ['./src/styles/custom.css']," in first_pass
+
+    # Re-running on an already-blank sidebar must not corrupt subsequent lines.
+    csd.reset_astro_config(apply=True)
+    second_pass = cfg.read_text(encoding="utf-8")
+    assert second_pass == first_pass
 
 
 def test_write_placeholder_index_and_remove_plans(monkeypatch, tmp_path):

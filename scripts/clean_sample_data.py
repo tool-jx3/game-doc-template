@@ -183,7 +183,11 @@ def reset_astro_config(apply: bool) -> None:
 
     text = ASTRO_CONFIG.read_text(encoding="utf-8")
     text = re.sub(r"title: '[^']*',", "title: '遊戲規則文件',", text, count=1)
-    text = re.sub(r"sidebar: \[.*?\n(\s*)\],", "sidebar: [],", text, flags=re.DOTALL, count=1)
+    # Already-empty sidebar (idempotent re-run): skip the destructive regex below.
+    # Otherwise its non-greedy `.*?\n\s*],` would find no newline before the very
+    # next `],` and over-consume past `plugins`/`customCss`/closing brackets.
+    if not re.search(r"sidebar: \[\s*\],", text):
+        text = re.sub(r"sidebar: \[.*?\n(\s*)\],", "sidebar: [],", text, flags=re.DOTALL, count=1)
     print(f"reset astro config: {ASTRO_CONFIG.relative_to(PROJECT_ROOT)}")
     if apply:
         ASTRO_CONFIG.write_text(text, encoding="utf-8")
