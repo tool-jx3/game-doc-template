@@ -1,4 +1,0 @@
-interface:
-  display_name: "Chapter Split"
-  short_description: "Split extracted markdown into semantic docs pages"
-  default_prompt: "Split extracted rulebook markdown into chapter files and regenerate navigation."

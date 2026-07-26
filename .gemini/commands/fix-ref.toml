@@ -1,0 +1,11 @@
+description = "將印刷頁碼引用轉為站內連結（映射到 fix-ref skill）"
+prompt = """
+Use the `fix-ref` skill from workspace skills at `.gemini/skills/fix-ref/SKILL.md`.
+Follow that skill exactly end-to-end.
+
+User arguments: {{args}}
+
+Requirements:
+- Interact with user in Traditional Chinese.
+- Report concrete file changes and executed commands.
+"""

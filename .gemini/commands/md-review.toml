@@ -1,0 +1,11 @@
+description = "檢查 Markdown 結構與文件風格合規（映射到 md-review skill）"
+prompt = """
+Use the `md-review` skill from workspace skills at `.gemini/skills/md-review/SKILL.md`.
+Follow that skill exactly end-to-end.
+
+User arguments: {{args}}
+
+Requirements:
+- Interact with user in Traditional Chinese.
+- Report concrete structural and style issues with file paths.
+"""
