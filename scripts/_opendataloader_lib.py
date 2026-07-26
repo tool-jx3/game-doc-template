@@ -47,6 +47,7 @@ def check_availability() -> dict[str, object]:
             ["java", "-version"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=10,
         )
         version_output = proc.stderr or proc.stdout
