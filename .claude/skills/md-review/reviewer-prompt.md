@@ -42,7 +42,7 @@ Agent tool (general-purpose):
 
     ## Project Conventions
 
-    Apply the documentation formatting and translation-style conventions from `AGENTS.md`, especially:
+    Apply the documentation formatting and translation-style conventions from `.claude/rules/docs-conventions.md`（文件格式與翻譯風格規範）, especially:
     - frontmatter title and description
     - heading hierarchy
     - internal links and anchors

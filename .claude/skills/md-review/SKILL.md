@@ -2,7 +2,6 @@
 name: md-review
 description: Use when a markdown draft or docs page must be checked for structural validity and documentation style compliance before writeback or publishing.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Markdown Review
@@ -29,7 +28,7 @@ If source content is available, compare the draft against the source. Otherwise,
 1. Read the target markdown content.
 2. If available, also read:
    - source content for the same page or draft
-   - `AGENTS.md` Integrated Conventions
+   - `.claude/rules/docs-conventions.md`（文件格式與翻譯風格規範）
    - `style-decisions.json`
    - `glossary.json` when proper-noun or term policy affects the judgment
 3. Treat `style-decisions.json.translation_notes` as hard constraints.

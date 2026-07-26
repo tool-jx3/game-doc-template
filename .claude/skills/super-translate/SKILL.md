@@ -90,7 +90,7 @@ Read `style-decisions.json.translation_mode.mode`. If missing, ask user:
 5. **Dispatch reviewer** (Agent tool, general-purpose) using `./reviewer-prompt.md`
    - Inline: source, draft, glossary, style
 6. **Dispatch Markdown reviewer** by invoking the `md-review` skill using `../md-review/reviewer-prompt.md`
-   - Inline: source, draft, glossary, style, project conventions from `AGENTS.md`
+   - Inline: source, draft, glossary, style, project conventions from `.claude/rules/docs-conventions.md`
    - This gate checks Markdown structure, frontmatter, heading hierarchy, block boundaries, lists, tables, links, image syntax, Starlight syntax, and zh-TW style rules
 7. If either reviewer fails → **dispatch refiner** using `./refiner-prompt.md`
    - Inline: source, draft, translation review JSON, md review JSON, glossary, style

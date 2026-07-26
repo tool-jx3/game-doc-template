@@ -2,7 +2,6 @@
 name: term-decision
 description: Use when selecting terminology and applying consistent replacements across documentation.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Terminology Decision
