@@ -12,6 +12,8 @@ Single-file Markdown structure and style gate for translated docs and drafts.
 
 **Core principle:** Block writeback when structure, syntax, or documentation conventions are broken.
 
+**模型建議：** 經 Agent tool 派遣時使用 **model: haiku**（清單式結構核對，無需高階推理能力）。
+
 ## Scope
 
 Default targets:

@@ -7,7 +7,7 @@ Use this template when dispatching the Markdown reviewer subagent.
 **Note:** All context is inlined by the orchestrator. Do not read any files yourself.
 
 ```text
-Agent tool (general-purpose):
+Agent tool (general-purpose, model: haiku):
   description: "Review markdown structure for <TARGET_FILE>"
   prompt: |
     You are reviewing one translated markdown draft for markdown validity and project style compliance.

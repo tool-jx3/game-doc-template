@@ -7,6 +7,8 @@ disable-model-invocation: true
 
 # Translate Document
 
+> 模型建議：本技能為主執行緒流程，依成本路由決策建議於 **sonnet** 會話執行；高階模型會話亦可執行，但屬超規格花費。
+
 ## Overview
 
 Single-pass translation of markdown content to Traditional Chinese with glossary compliance, draft isolation, progress tracking, and one Git checkpoint commit per completed batch.

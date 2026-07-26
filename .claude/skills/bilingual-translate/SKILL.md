@@ -7,6 +7,8 @@ disable-model-invocation: true
 
 # Bilingual Translate
 
+> 模型建議：本技能為主執行緒流程，依成本路由決策建議於 **sonnet** 會話執行；高階模型會話亦可執行，但屬超規格花費。
+
 ## Overview
 
 Single-pass bilingual translation. Produces documents where each Chinese paragraph is followed by the English original as a blockquote.
