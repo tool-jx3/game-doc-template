@@ -96,6 +96,16 @@ git push -u origin main
 
 **Verification:** `git remote -v` shows origin; `gh repo view` accessible.
 
+### 清理模板範例資料（必要，不可跳過）
+
+複製完成後立即在新專案目錄執行：
+
+```bash
+uv run python scripts/clean_sample_data.py --yes
+```
+
+此步驟會重置 `glossary.json`、`chapters.json`、`style-decisions.json`、`docs/astro.config.mjs`（標題與側欄）、刪除 `data/translation-progress*.json` 與 `plans/`，並寫入佔位首頁，確保新專案不含模板殘留。
+
 ### Step 5: Copy PDF and Apply Configuration
 
 Copy PDF:

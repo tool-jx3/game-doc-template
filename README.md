@@ -241,16 +241,26 @@ OCR 補充：
 - 英文建議使用 `eng`。
 - 若同頁真的混排繁中、日文、英文，可用 `chi_tra+jpn+eng`，但一般仍建議使用最小必要語言集合。
 
-### 清除範例資料（可選）
+### 清除範例資料
+
+`new-project` 建立新專案時會自動執行本腳本一次，確保新專案不含模板殘留，一般不需要手動執行。若要在既有專案重新清理，可執行：
 
 ```bash
 uv run python scripts/clean_sample_data.py --yes
 ```
 
-會清除：
+會執行以下清理：
 
-- `data/markdown/*`
-- `docs/src/content/docs/**/*.md|.mdx`
+- 清空 `data/markdown/*`（保留 `.gitkeep`）
+- 清空 `docs/src/content/docs/**/*.md`、`*.mdx`，並移除清空後留下的空目錄
+- 移除範例圖片：`docs/public/bg.jpg`、`docs/public/og-image.jpg`、`docs/src/assets/hero.jpg`
+- 重置 `glossary.json`（僅保留 `_meta.description`，`updated` 清空）
+- 重置 `chapters.json` 為佔位章節設定
+- 重置 `style-decisions.json`（僅保留 `_meta.description`，`updated` 清空）
+- 刪除 `data/translation-progress*.json`
+- 重置 `docs/astro.config.mjs` 的標題與側邊欄
+- 寫入佔位首頁 `docs/src/content/docs/index.mdx`
+- 刪除 `plans/` 目錄
 
 不會清除：
 

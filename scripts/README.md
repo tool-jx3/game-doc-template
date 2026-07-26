@@ -45,14 +45,28 @@ tesseract --list-langs
 
 ## 工作流程
 
-### 0. 清除範例資料（建議先執行）
+### 0. 清除範例資料
+
+`new-project` 建立新專案時會自動執行本腳本一次，一般不需要手動執行。若要在既有專案重新清理，可執行：
 
 ```bash
 uv run python scripts/clean_sample_data.py --yes
 ```
 
-會清除既有提取結果與範例 docs 內容，但不會刪除 `data/pdfs/` 的來源 PDF。
-同時會重置 `glossary.json` 為空白術語表（保留 `_meta`）。
+會執行以下清理：
+
+- 清空 `data/markdown/*`（保留 `.gitkeep`）
+- 清空 `docs/src/content/docs/**/*.md`、`*.mdx`，並移除清空後留下的空目錄
+- 移除範例圖片：`docs/public/bg.jpg`、`docs/public/og-image.jpg`、`docs/src/assets/hero.jpg`
+- 重置 `glossary.json`（僅保留 `_meta.description`，`updated` 清空）
+- 重置 `chapters.json` 為佔位章節設定
+- 重置 `style-decisions.json`（僅保留 `_meta.description`，`updated` 清空）
+- 刪除 `data/translation-progress*.json`
+- 重置 `docs/astro.config.mjs` 的標題與側邊欄
+- 寫入佔位首頁 `docs/src/content/docs/index.mdx`
+- 刪除 `plans/` 目錄
+
+不會刪除 `data/pdfs/` 的來源 PDF。
 
 ### 1. 提取 PDF 內容
 
