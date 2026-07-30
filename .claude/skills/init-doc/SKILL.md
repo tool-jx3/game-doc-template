@@ -146,8 +146,23 @@ uv run python scripts/style_decisions.py set-translation-mode \
 1. If `preserve_images = true`, ask user to assign extracted images for hero/background/og.
 2. If `preserve_images = true`, copy and resize where needed.
 3. If `preserve_images = false`, skip extracted image assignment and continue with theme-only setup.
-4. Ask theme decisions in Traditional Chinese (mode/overlay/palette).
-5. Update `docs/src/styles/custom.css` and persist style decisions.
+4. Ask theme decisions in Traditional Chinese. `custom.css` derives every interface
+   layer (nav, sidebar, hairlines, inline code, surfaces) from `--bg-h` and `--bg-l`,
+   so ask for those two knobs plus the accent hues — never for individual layer colors.
+   - `--overlay-opacity` MUST stay `0` unless a background image is actually placed at
+     `docs/public/bg.jpg`. On a flat background the overlay has nothing to mask and only
+     darkens the page.
+   - `--bg-l` is meaningful in the 5%-16% range (dark mode only; the layer model is additive).
+5. Update `docs/src/styles/custom.css`, then persist the theme decision via:
+
+```bash
+uv run python scripts/style_decisions.py set-theme \
+  --mode dark-forced \
+  --bg-h "<0-360>" \
+  --bg-l "<5%-16%>" \
+  --overlay "<0_unless_background_image_used>" \
+  --palette "<色票說明>"
+```
 6. Persist image retention decision via:
 
 ```bash

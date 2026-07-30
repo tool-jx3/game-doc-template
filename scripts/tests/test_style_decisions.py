@@ -105,6 +105,113 @@ def test_cmd_set_translation_mode_bilingual(tmp_path):
     assert payload["translation_mode"]["reason"] == "test"
 
 
+def test_cmd_set_theme_persists_all_fields(tmp_path):
+    style_path = tmp_path / "style-decisions.json"
+    _seed_style(style_path)
+
+    args = argparse.Namespace(
+        style=style_path,
+        schema=SCHEMA_PATH,
+        mode="dark-forced",
+        overlay="0",
+        palette="冷色系：primary=217 藍、secondary=180 青",
+        bg_h="268",
+        bg_l="14%",
+    )
+    sd.cmd_set_theme(args)
+
+    payload = json.loads(style_path.read_text(encoding="utf-8"))
+    theme = payload["theme"]
+    assert theme["mode"] == "dark-forced"
+    assert theme["overlay"] == "0"
+    assert theme["bg_h"] == "268"
+    assert theme["bg_l"] == "14%"
+    assert theme["palette"].startswith("冷色系")
+
+
+def test_cmd_set_theme_merges_without_dropping_existing(tmp_path):
+    style_path = tmp_path / "style-decisions.json"
+    _seed_style(style_path)
+
+    first = argparse.Namespace(
+        style=style_path,
+        schema=SCHEMA_PATH,
+        mode="dark-forced",
+        overlay=None,
+        palette=None,
+        bg_h=None,
+        bg_l=None,
+    )
+    sd.cmd_set_theme(first)
+
+    second = argparse.Namespace(
+        style=style_path,
+        schema=SCHEMA_PATH,
+        mode=None,
+        overlay=None,
+        palette=None,
+        bg_h=None,
+        bg_l="16%",
+    )
+    sd.cmd_set_theme(second)
+
+    theme = json.loads(style_path.read_text(encoding="utf-8"))["theme"]
+    assert theme["mode"] == "dark-forced"
+    assert theme["bg_l"] == "16%"
+
+
+def test_cmd_set_theme_requires_at_least_one_field(tmp_path):
+    style_path = tmp_path / "style-decisions.json"
+    _seed_style(style_path)
+
+    args = argparse.Namespace(
+        style=style_path,
+        schema=SCHEMA_PATH,
+        mode=None,
+        overlay=None,
+        palette=None,
+        bg_h=None,
+        bg_l=None,
+    )
+    with pytest.raises(SystemExit):
+        sd.cmd_set_theme(args)
+
+
+@pytest.mark.parametrize("value", ["-0.1", "1.5", "abc"])
+def test_parse_overlay_rejects_out_of_range(value):
+    with pytest.raises(argparse.ArgumentTypeError):
+        sd.parse_overlay(value)
+
+
+def test_parse_overlay_accepts_bounds():
+    assert sd.parse_overlay("0") == "0"
+    assert sd.parse_overlay("0.7") == "0.7"
+    assert sd.parse_overlay("1") == "1"
+
+
+@pytest.mark.parametrize("value", ["-1", "361", "abc"])
+def test_parse_hue_rejects_out_of_range(value):
+    with pytest.raises(argparse.ArgumentTypeError):
+        sd.parse_hue(value)
+
+
+def test_parse_hue_accepts_bounds():
+    assert sd.parse_hue("0") == "0"
+    assert sd.parse_hue("360") == "360"
+
+
+@pytest.mark.parametrize("value", ["-1%", "101%", "abc", "%"])
+def test_parse_lightness_rejects_invalid(value):
+    with pytest.raises(argparse.ArgumentTypeError):
+        sd.parse_lightness(value)
+
+
+def test_parse_lightness_normalizes_to_percent():
+    assert sd.parse_lightness("6") == "6%"
+    assert sd.parse_lightness("14%") == "14%"
+    assert sd.parse_lightness(" 16 % ") == "16%"
+
+
 def test_validate_style_decisions_reports_invalid_payload(monkeypatch, tmp_path):
     style_path = tmp_path / "style-decisions.json"
     style_path.write_text(
