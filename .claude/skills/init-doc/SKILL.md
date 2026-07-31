@@ -183,11 +183,11 @@ uv run python scripts/style_decisions.py set-images --preserve-images <true_or_f
      --intro "<USER_INPUT>"
    ```
 
-9. Ask for copyright and credits in Traditional Chinese:
+8. Ask for copyright and credits in Traditional Chinese:
    - Copyright notice text（例：`© 2024 Author Name. All rights reserved.`）
    - Credits entries as role → name pairs（例：原作者、翻譯、美術設計等）
    - Whether to show each section on the homepage
-10. Persist via:
+9. Persist via:
 
 ```bash
 uv run python scripts/style_decisions.py set-copyright \
@@ -199,7 +199,7 @@ uv run python scripts/style_decisions.py set-credits \
   --show-on-homepage <true_or_false>
 ```
 
-11. Ask whether there are any translation-wide notes the translator must always follow.
+10. Ask whether there are any translation-wide notes the translator must always follow.
     Persist each note via:
 
 ```bash
@@ -218,7 +218,7 @@ uv run python scripts/style_decisions.py add-translation-note \
   --note "<USER_INPUT>"
 ```
 
-12. Run:
+11. Run:
 
 ```bash
 uv run python scripts/validate_style_decisions.py
