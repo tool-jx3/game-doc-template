@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as pagefind from 'pagefind';
 import { createSegmenter, HAN_ONLY } from '../client/segment.mjs';
+import { loadTerms } from './load-terms.mjs';
 import { rewritePage } from './rewrite-html.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -13,24 +14,6 @@ const DIST = path.join(DOCS, 'dist');
 const BUNDLE = path.join(DIST, 'pagefind');
 const CLIENT = path.join(DOCS, 'search/client');
 const GLOSSARY = path.resolve(DOCS, '../glossary.json');
-
-async function loadTerms() {
-	let raw;
-	try {
-		raw = JSON.parse(await fs.readFile(GLOSSARY, 'utf8'));
-	} catch (err) {
-		// 搜尋品質直接取決於術語表，靜默降級會產出看似正常但品質低落的索引。
-		throw new Error(`無法讀取 glossary.json（${GLOSSARY}）：${err.message}`);
-	}
-	const terms = [];
-	for (const value of Object.values(raw)) {
-		if (!value || typeof value !== 'object') continue;
-		const zh = typeof value.zh === 'string' ? value.zh.trim() : '';
-		if (zh.length > 1 && HAN_ONLY.test(zh)) terms.push(zh);
-	}
-	if (!terms.length) throw new Error('glossary.json 未取得任何可用術語');
-	return terms;
-}
 
 async function* htmlFiles(dir) {
 	for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
@@ -58,9 +41,16 @@ function assertPagefind(response, label) {
 }
 
 async function main() {
-	const terms = await loadTerms();
+	// glossary 缺失或損壞仍會失敗（見 load-terms.mjs）；檔案合法但沒有已核准術語
+	// 是新專案的正常狀態，降級為純 Intl.Segmenter 斷詞——對 zh-TW 一般詞彙
+	// 仍優於 Pagefind 內建的簡體 jieba，且讓專案在 /init-doc 之前就能建置部署。
+	const terms = await loadTerms(GLOSSARY);
 	const segmenter = createSegmenter(terms);
-	console.log(`[search] 術語表 ${terms.length} 詞`);
+	if (terms.length) {
+		console.log(`[search] 術語表 ${terms.length} 詞`);
+	} else {
+		console.warn('[search] glossary 尚無已核准術語，改用純 Intl.Segmenter 斷詞；核准術語後重新建置即可納入');
+	}
 
 	const vocab = new Set();
 	let rewritten = 0;
