@@ -1,0 +1,9 @@
+{
+  "_comment": "複製為 verify-cases.json 並依專案語料調整；欄位說明見 README.md。min/max 取實測健康值的容許範圍（約六至七成下限、兩三成上限餘裕），first 為首筆 URL 須符合的正則（可省略）。",
+  "cases": [
+    { "query": "某完整術語", "min": 1, "max": 5, "first": "/expected-page/" },
+    { "query": "另一術語", "min": 4, "max": 10 }
+  ],
+  "expansion": "軍團",
+  "icu": { "query": "轉過身來", "min": 1, "max": 10 }
+}
