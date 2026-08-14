@@ -5,13 +5,17 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node search/build/index.mjs",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test": "node --test search/**/*.test.mjs",
+    "verify-search": "node search/verify.mjs"
   },
   "dependencies": {
     "@astrojs/starlight": "0.37.6",
     "astro": "5.17.3",
+    "node-html-parser": "^9.0.1",
+    "pagefind": "1.4.0",
     "sharp": "^0.34.2",
     "starlight-auto-sidebar": "^0.2.0"
   }
