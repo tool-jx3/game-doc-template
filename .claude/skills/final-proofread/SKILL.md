@@ -1,6 +1,6 @@
 ---
 name: final-proofread
-description: Use when performing final quality checks before publishing the documentation site. Use when all translation is complete and you need to verify titles/descriptions are translated, check for misplaced or erroneous content, and run page-reference link checks.
+description: Use when performing final quality checks before publishing the documentation site. Use when all translation is complete and you need to verify titles/descriptions are translated, check for misplaced or erroneous content, run page-reference link checks, and verify the search index.
 user-invocable: true
 disable-model-invocation: true
 ---
@@ -9,18 +9,18 @@ disable-model-invocation: true
 
 ## Overview
 
-Three-gate quality sweep over all translated documentation: (1) frontmatter completeness, (2) content integrity, (3) page-reference link audit.
+Four-gate quality sweep over all translated documentation: (1) frontmatter completeness, (2) content integrity, (3) page-reference link audit, (4) search index verification.
 
 **Core principle:** No gate skipped. All findings must be reported before the run closes.
 
 ## Task Initialization (MANDATORY)
 
 Before ANY action, create tasks using TaskCreate:
-- One task per gate (Gate 1, Gate 2, Gate 3)
+- One task per gate (Gate 1, Gate 2, Gate 3, Gate 4)
 - One task for consolidated report
 - One task for fix verification
 
-Announce: "Created 5 tasks. Starting execution..."
+Announce: "Created 6 tasks. Starting execution..."
 
 ## The Process
 
@@ -123,6 +123,21 @@ For each match:
 
 **Verification (Gate 3):** Scan complete; all navigational page refs resolved or escalated. Mark Gate 3 task `completed`.
 
+### Gate 4: Search Index Verification
+
+**Goal:** Confirm the zh-TW search layer works on the final build (see `docs/search/README.md`).
+
+1. Build the site with search post-processing, then run the acceptance script:
+
+   ```bash
+   cd docs && bun install && bun run build && bun run verify-search
+   ```
+
+2. If `docs/search/verify-cases.json` does not exist, the script runs generic checks only (segmentation health, term-in-vocab rate) and prints a hint. In that case, propose corpus-specific cases to the user following the「驗收（verify-search）」section of `docs/search/README.md`, and create the file once confirmed.
+3. Record every verify-search failure line as a Gate 4 FAIL. Do not adjust thresholds to make failures pass; threshold changes require user confirmation.
+
+**Verification (Gate 4):** verify-search exited 0, or all failures are recorded as findings. Mark Gate 4 task `completed`.
+
 ### Step 2: Consolidated Report
 
 Produce a single report in Traditional Chinese:
@@ -160,10 +175,17 @@ Produce a single report in Traditional Chinese:
 #### 待確認（非導航性）
 - `<file>` 第 N 行：`page 3`（疑似非導航性，請確認）
 
+### Gate 4 — 搜尋驗收
+#### FAIL（必須處理）
+- `verify-search`：「<查詢>」回傳 N 筆，超過上限 M
+#### 提示
+- 尚未建立 `docs/search/verify-cases.json`，僅執行通用檢查
+
 ### 整體結論
 - Gate 1: X 個 FAIL，Y 個 WARN
 - Gate 2: X 個問題
 - Gate 3: X 個已修復，Y 個待確認
+- Gate 4: 驗收通過／X 個 FAIL
 ```
 
 Mark consolidated report task `completed`.
@@ -208,6 +230,7 @@ Stop when:
 - A Gate 2 broken link cannot be mapped to any existing route.
 - A Gate 3 reference is ambiguous (navigational vs. non-navigational is unclear).
 - A Gate 1 FAIL involves a term that is not yet in the glossary and requires a user decision.
+- A Gate 4 failure looks like an outdated threshold rather than a search regression (content changed since the case was written) — threshold changes need user confirmation.
 
 ## Example Usage
 

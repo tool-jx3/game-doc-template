@@ -55,3 +55,6 @@ tmp/
 
 # Chapter extraction
 chapters_*.json
+
+# Superpowers SDD workspace
+.superpowers/
