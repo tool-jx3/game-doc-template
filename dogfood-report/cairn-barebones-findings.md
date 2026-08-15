@@ -46,3 +46,19 @@
     此次測試繞過方式：改用 schema 相容的 decisionRecord 形狀手動寫入，讓後續能繼續測試翻譯階段本身。
 
 15. 全部 13 個輸出檔都殘留 PDF 頁碼註腳的裸數字行（例如 overview-principles/index.md 裡的「3」「4」「5」），split_chapters.py 沒有過濾掉這些頁碼標記文字。更麻煩的是在 marketplace/index.md 裡，這種「獨立一行的裸數字」跟「price 表格因項目名稱過長被 PDF 自動換行、導致價格數字被擠到獨立一行」的情況長得一模一樣、混在一起（例如「Bathing Goods (Soap, Perfume, etc.)」後面隔一行才接著單獨一行「5」，這個 5 其實是該項目的價格，不是頁碼）——光看格式完全無法區分哪個裸數字是頁碼雜訊、哪個是被拆散的真實價格。這對翻譯品質是真實風險：譯者/reviewer 有可能誤刪真實價格數字（當成頁碼雜訊清掉），或誤把頁碼數字當成某個項目的價格接上去。這個不預先手動清理，留給接下來的 super-translate 實際跑跑看，觀察 translator/reviewer 能不能正確處理，作為翻譯品質實測的一部分。
+
+## super-translate 實測結果（Step 5 reviewer/md-reviewer 併發派工）
+
+16. **【重大、正面】確認：reviewer + md-reviewer 兩道關卡在正確派工（opus reviewer + haiku md-reviewer，完整 inline context）下確實有效，能抓到刻意植入且完全沒提示的缺陷**。5 個檔案的實測結果：
+    - overview-principles/index.md：opus reviewer 精準抓到刻意保留的「NPC 首次加註後又退回裸英文」3 處位置，combat.md 的 opus reviewer 也精準抓到刻意留著、全文從未加註過的裸 NPC 2 處。
+    - npcs-and-magic.md（完全不提示）：md-reviewer 與 opus reviewer 都主動抓到刻意保留的 PDF 頁碼殘留數字「8」「9」，opus reviewer 並主動抓到 Reactions 表格違反 style-decisions.json 記錄的骰表慣例（轉置成含空白表頭格的錯誤形狀），給出具體修正結構。
+    - 兩道關卡並非重複：opus reviewer 判斷「- •」殘留符號是繼承自來源格式、不是新譯文錯誤，同一問題 md-reviewer 卻正確地從結構規範角度判為需修正的格式缺陷——兩者互補，非互斥。
+    - 除了刻意植入的缺陷外，opus reviewer 在完全沒有人為植入問題的檔案（player-characters.md、dungeon-exploration.md）裡，仍抓到多個真實的翻譯品質問題（列表項目誤融合、術語撞名、被動語態語意反轉、slot/inventory 用語不一致、"petty"/"serious" 等假朋友誤譯），可信度高。
+
+17. **【重大、新發現】確認：全部檔案的小節標籤（如「屬性」「豁免」「反應」「法術書」）從 PDF 擷取階段起就只是純文字段落，從未被標記成真正的 Markdown 標題**，違反 `docs-conventions.md` 的「MUST use H2 for main sections, H3 for subsections」規則——因為這個格式是來源本身帶來的，且 `translate`/`super-translate` 的「保留來源區塊型態」原則本意是防止譯者亂改結構，兩者疊加導致這個缺陷從擷取到翻譯全程沒人處理，直到這次刻意「不提示」派 reviewer 才第一次被系統性抓出來。
+    影響具體且可驗證：combat.md 的 opus reviewer 指出，若僅將其中一個小節（「傷疤」）升級成 H2、其餘 11 個維持純文字，會讓 Starlight 側欄目錄只顯示 2 個項目、其餘 10 個小節完全從導覽消失——這是真正的渲染缺陷，不是格式偏好。
+    同一缺陷在 4 個新測試檔案（player-characters、npcs-and-magic、combat、dungeon-exploration）的 md-reviewer 都判為 critical，但在第一個檔案（overview-principles）的 md-reviewer 卻完全沒被抓到（該檔案有一模一樣的小節純文字標籤，卻只抓到標題重複問題）——同一類缺陷、同一顆 haiku 模型，跨檔案判定不一致，這本身也是一個值得注意的 reviewer 可靠性發現。
+    修法建議：`split_chapters.py` 或其上游擷取階段應嘗試辨識原書的「小節標籤」樣式（例如全形獨立段落、無句尾標點、後接內文）並主動標記為 H3，而不是留給 translate 階段被動繼承；若技術上無法可靠辨識，至少應在 chapter-split 或 super-translate 的 review scope 裡明確列入「小節標籤必須有對應標題層級」這條規則（目前 md-review/reviewer-prompt.md 第 2、3 項只講「不重複 title」「不可跳級」，沒有明講「純文字小節標籤本身就是缺陷」，這次是 haiku 自行延伸解讀規則抓到的，不穩定）。
+
+18. **【確認，orchestrator 端錯誤，非 template 缺陷，但暴露真實風險】refiner subagent 派工時若只給相對路徑（如 `docs/src/content/docs/core-rules/combat.md`），實測有 3 次直接寫進錯誤專案（game-doc-template 本身的 `.state/` 目錄），而不是目標專案 `cairn-barebones-docs`**。原因：subagent 的實際 cwd 繼承自它被啟動時的環境，而非目標專案路徑；relative path 在 prompt 裡沒有錨定專案根目錄時，subagent 會用自己當下的 cwd 解析，兩者不保證一致。此次由於 `.state/` 已在 game-doc-template 的 `.gitignore` 中，未造成實際汙染，事後人工搬移檔案修正。
+    這雖然是我（orchestrator）派工時的失誤，但也指出一個 template 本身可以強化的地方：`super-translate/refiner-prompt.md`、`reviewer-prompt.md`、`translator-prompt.md` 裡的 `<TARGET_FILE>`／`<DRAFT_FILE>` 佔位符範例都是相對路徑（例如 `Path: <TARGET_FILE>`），沒有明確要求 orchestrator 必須代入絕對路徑。建議在這三個 prompt template 加一行提醒：「orchestrator 代入路徑時必須使用絕對路徑，不可用相對路徑」，降低未來再次發生同類寫錯專案事故的機率。
