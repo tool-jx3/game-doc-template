@@ -1,0 +1,48 @@
+# Dogfood 測試發現紀錄：Cairn: Barebones Edition
+
+專案：~/projects/cairn-barebones-docs
+來源：https://yochaigal.itch.io/cairn-barebones-edition（CC-BY-SA 4.0，2026-01-29）
+
+## 發現清單
+
+1. `new-project/SKILL.md` Step 5 提到「(if public) 更新 GitHub social link」，但 docs/astro.config.mjs 沒有這個機制，指令引用不存在的設定項。
+
+2. `new-project`/`init-doc`/`chapter-split` 仍是「Before ANY action, create tasks using TaskCreate」的強制寫法，但此環境沒有 TaskCreate 工具。translate/super-translate/bilingual-translate 已在 rcc:migrate 時改成條件式寫法，這三個沒同步。
+
+3. `init-doc` Step 1 強制重跑 `clean_sample_data.py --yes`，會把 `new-project` 剛設定好的 style-decisions.json repository 區塊整個清空。文件順序 /new-project 接 /init-doc 會互相打架。
+
+4. `extract_pdf.py --no-include-images` 對 opendataloader 引擎無效：opendataloader-pdf 套件自己在輸出的 markdown 裡內嵌 `![image N](page_N_images/imageFileN.png)` 語法（與 include_images flag 完全無關，那個 flag 只控制另一個獨立的 pymupdf extract_images() 步驟）。因為我們只保留 opendataloader 暫存目錄裡的 .md 文字、丟棄圖片檔，這些參照永遠是死連結。實測 Cairn Barebones Edition 第 1、47、48 頁（封面、角色卡頁）出現此問題，不受 --no-include-images 影響。
+
+
+5. 第 47-48 頁（角色卡）擷取結果只有一張死連結圖片、無文字內容，`chapter-split` 沒有「純圖片無文字頁面」的處理規則，容易被忽略直接切入章節結構。（已由使用者決定：從章節切分排除）
+
+6. AskUserQuestion 在產生較長的繁體中文問句/選項文字時，觀察到至少 2 次真實的文字損毀（"戰鬥"變成"戰[亂碼]printed"；"明確"變成"明訬"）。這可能是使用者稍早提到「地窕」「ask 文字跟理解有落差」的同一個底層問題根源——不是我編造內容，而是工具呼叫生成長中文字串時偶發損毀。與 game-doc-template 本身無關，但直接影響所有要求 zh-TW AskUserQuestion 的 skill 可靠性（Law 6 幾乎要求全部互動都用中文）。
+
+7. `term_generate.py --min-frequency 2` 雜訊比例極高：200 個候選詞裡多數是常見英文虛詞/動詞（character, roll, does, instead, short, come, means, multiple, distance, door, example, answer, chance, body），且會把我們自己 extract_pdf.py 注入的 `<!-- PAGE N -->` 頁碼標記誤判為術語候選（"PAGE" 出現 70 次進入候選清單）。對一本 48 頁小書而言，200 個候選詞裡有意義的可能不到 30 個，人工篩選成本很高，跟 README 描述的 spaCy POS/lemma 輔助似乎沒有實際發揮過濾作用。
+
+8. 自己在跑 term-decision 時也犯了一次術語選字錯誤：用 term_edit.py 建立「Non-Player Character」（全稱），但原書實際只在首次定義時出現過一次全稱，其餘全用「NPCs」縮寫，導致 term_read.py 報「缺少使用」。改用「NPC」重建後才通過（find_term_spans 對 NPC/NPCs 有做單複數容錯）。提醒：term-decision 流程裡沒有「先確認詞在語料庫的實際主要出現形式」這一步，容易選到書面全稱但語料庫其實用縮寫的詞。
+
+9. `chapter-split` 的 topology-planner → toc-planner → wordcount-planner 是「依序」派工（不平行），且每個 planner 都要求逐頁核對 `<!-- PAGE N -->` 邊界、讀完整份來源檔。實測：光 topology-planner 一個 agent 就跑了約 7 分鐘（26 次工具呼叫、12 萬 token）。對一本 48 頁小書而言，整個規劃階段（3 個 agent 依序跑完）估計要 15-20 分鐘以上，翻譯都還沒開始。這跟 super-translate 慢的根因（序列化的重量級 subagent 派工）是同一類問題，只是發生在 chapter-split 而非 super-translate。topology-planner 和 toc-planner 讀的是同一份來源檔＋前一階段的 draft output，理論上有平行化空間（例如 toc-planner 可以不等 topology 完全定案就先起頭做粗略切分，或至少把「讀來源檔」這個步驟快取/共享），但目前設計是純序列 pipeline。
+
+10. **根因確認（比發現 9 更精確）**：`chapter-split/SKILL.md` 的 3 個 planner dispatch templates（topology-planner/toc-planner/wordcount-planner）完全沒有標示任何 model tier（grep model/opus/sonnet/haiku 零匹配），跟 translate（sonnet）、super-translate（translator/reviewer=opus, md-reviewer=haiku, refiner=sonnet）、bilingual-translate（sonnet）形成明顯對比。這代表 chapter-split 的 3 個 planner 全部用呼叫端當下的預設模型/effort 執行（此次是繼承主 session 的 Sonnet 5），即使其中至少 wordcount-planner（純數字門檻判斷、依字數重新分配）性質上更接近 super-translate md-reviewer 那種「清單式核對、無需判斷力」的工作，理論上可以用更低階模型。這很可能是 topology-planner 花費 7 分鐘/12 萬 token 的直接原因之一，且與這個專案本季反覆強調的「模型分層、避免 token 大爆炸」核心原則直接矛盾——chapter-split 在做 Codex 整合與模型分層那輪重構時被漏掉了。
+
+11. **模型分層假說實測驗證**：把 wordcount-planner 從預設（繼承 session sonnet）改成明確指定 `model: haiku`，耗時從 topology-planner 408 秒／toc-planner 632 秒，降到 **106 秒**（快 4-6 倍），tool call 從 19-26 次降到 5 次，token 從 12-16 萬降到 7.1 萬。強烈支持「chapter-split 的 planner 沒有模型分層是主要拖慢原因」（呼應發現 10）。
+    但同時也發現真實的品質代價：haiku 把 `character-creation/basics`（100 人名表+屬性擲骰步驟，433 字）和 `traits`（8 張 d10 特徵隨機表，874 字）合併成一檔，理由是合併後 1307 字落在字數建議區間內。這個判斷**只看字數，沒有權衡 topology-planner 原本「讀者會分別跳轉到不同隨機表」的導覽理由**——純文字字數對錶格密集內容是失真指標（100 列的表每列只有 1-2 個字，字數低不代表內容少或該合併）。使用者最終決定不採用這個合併建議，改用 toc-planner 原始的 13 檔切分。
+    結論：wordcount-planner 這類「數字門檻判斷」用低階模型換取速度是合理方向，但需要在 prompt 裡明確加入「不要只看字數，要保留 topology-planner 已經給的導覽理由」這類防護，否則低階模型會machine-like 地只服從數字規則、忽略前一階段已經給的質化判斷依據。
+
+12. **確認：split_chapters.py 標題階層 bug，範圍比 toc-planner 原本標記的更廣**。實測全部 13 個輸出檔（不只合併檔案，連「直接連結」單一主題檔也一樣）都殘留原文的裸 `# ` H1，因為 `_strip_duplicate_heading()` 只在該標題文字「完全等於」frontmatter.title 時才會處理，而拆分階段的標題仍是英文原文，永遠不會等於中文 frontmatter.title，所以實際上這個函式在現有 pipeline 裡幾乎從未真正生效過。具體兩種缺陷模式：
+    (a) 合併多個來源 H1 到一頁時，除第一個外全部原樣保留成裸 H1（一頁多個 H1，違反標題階層慣例）——core-rules/npcs-and-magic.md、procedures/wilderness-exploration.md、procedures/downtime.md、overview-principles/index.md 都是這種。
+    (b) 檔案只涵蓋父章節底下第一個子小節時，會殘留「父章節標題」這個不屬於本頁範圍的裸 H1（例如 player-characters.md 開頭是「# Core Rules」而非「# Player Characters」）——player-characters.md、dungeon-exploration.md、basics.md 是這種。
+    現有的 translate/super-translate 自我審查規則「不得新增/重複 frontmatter.title 的標題」**無法攔截這兩種缺陷**：模式 (a) 的裸標題翻譯後通常不等於 frontmatter.title（因為 title 是合併後的複合標題）；模式 (b) 的裸標題內容根本是別的（父）章節名稱，審查規則從未檢查過「這個 H1 是否根本不屬於本頁範圍」這件事。
+    也確認了先前 terminology-check.py 加的標題跳級檢查（`check_structure`）不會抓到「一頁多個 H1」這種缺陷，它只檢查跳級（H1 直接接 H3），不檢查同層重複。
+    已手動修正這次測試專案的全部 13 個檔案（刪除模式 (b) 的父章節標題、模式 (a) 全部降級為 ##），讓後續 translate/super-translate 測試不被這個上游結構缺陷污染。**這是 split_chapters.py 需要修的真實 bug，修法建議：`_strip_duplicate_heading()` 除了比對第一個標題是否等於 frontmatter.title，還要把該檔案內所有其餘的裸 H1（不論匹配與否）一律降級為 H2 起跳，而不是原樣保留。**
+
+13. **確認**：`init_handoff_gate.py` 最後一關會跑 `bun run build`，但 `/new-project` 和 `/init-doc` 兩個 skill 的自動化步驟裡都沒有 `cd docs && bun install` 這一步（只在 README「快速開始」手動流程裡提到）。實測：全新專案照 skill 自動流程走到底，`init_handoff_gate.py` 會直接因為 `astro: command not found` 失敗（exit 127）。裝完 `bun install` 後重跑立刻過。修法建議：`new-project` 的「清理模板範例資料」步驟後，或 `init-doc` Step 1，補一步自動執行 `cd docs && bun install`（或至少在失敗時給出明確的「請先跑 bun install」提示，而不是讓使用者自己去查 astro command not found 是什麼意思）。
+
+14. **【重大】確認：Codex 草稿分層功能從未能成功寫入偏好設定，這個 session 稍早新增後從未真正 live 驗證過**。`translate/codex-tier.md` §1 指示要檢查 `style-decisions.json.codex_tier.enabled`、寫入 `{"codex_tier": {"enabled": true}}`；但 `style-decisions.schema.json` 沒有 `codex_tier` 專屬定義，任何未列名欄位（含 codex_tier）一律套用通用的 `$defs/decisionRecord`（`additionalProperties: false`，必填 `decision` + `reason` 字串，沒有 `enabled` 這個欄位）。實測：照 codex-tier.md 指示執行 `style_decisions.py merge-json --patch '{"codex_tier": {"enabled": true}}'` 直接噴 schema validation 錯誤（`Additional properties are not allowed ('enabled' was unexpected)`），完全無法完成第一次詢問後「寫入偏好、之後不再問」的核心承諾——每個專案第一次啟用 Codex 分層都會在這裡卡死。
+    另外 codex-tier.md 也完全沒指定「用哪個指令寫入」，只寫了 JSON 內容片段；實際上 `style_decisions.py` 沒有 `set-codex-tier` 專屬子指令，只能用通用的 `merge-json`（且如上所述還是會失敗）。
+    根因：這是 OpenSpec `add-codex-translation-tier` 變更裡明確標記為「pending，需要 live 執行 /translate 才能驗證」的任務 7.1/7.2 所要防範的那種缺陷——因為當時沒有真的跑過，這個 schema 不相容的問題直到這次 dogfood 才第一次被抓到。
+    修法建議：要嘛在 style-decisions.schema.json 的 `properties` 裡新增 `codex_tier: {type: object, properties: {enabled: {type: boolean}}}` 明確定義；要嘛把 codex-tier.md 改成使用通用 decisionRecord 形狀（`{"decision": "enabled"/"disabled", "reason": "..."}`）並同步改詢問後的檢查邏輯（`.codex_tier.decision == "enabled"` 而非 `.codex_tier.enabled`）。前者較符合這個欄位「布林開關」的本質，建議採用前者。
+    此次測試繞過方式：改用 schema 相容的 decisionRecord 形狀手動寫入，讓後續能繼續測試翻譯階段本身。
+
+15. 全部 13 個輸出檔都殘留 PDF 頁碼註腳的裸數字行（例如 overview-principles/index.md 裡的「3」「4」「5」），split_chapters.py 沒有過濾掉這些頁碼標記文字。更麻煩的是在 marketplace/index.md 裡，這種「獨立一行的裸數字」跟「price 表格因項目名稱過長被 PDF 自動換行、導致價格數字被擠到獨立一行」的情況長得一模一樣、混在一起（例如「Bathing Goods (Soap, Perfume, etc.)」後面隔一行才接著單獨一行「5」，這個 5 其實是該項目的價格，不是頁碼）——光看格式完全無法區分哪個裸數字是頁碼雜訊、哪個是被拆散的真實價格。這對翻譯品質是真實風險：譯者/reviewer 有可能誤刪真實價格數字（當成頁碼雜訊清掉），或誤把頁碼數字當成某個項目的價格接上去。這個不預先手動清理，留給接下來的 super-translate 實際跑跑看，觀察 translator/reviewer 能不能正確處理，作為翻譯品質實測的一部分。
