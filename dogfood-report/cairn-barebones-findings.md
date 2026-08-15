@@ -62,3 +62,11 @@
 
 18. **【確認，orchestrator 端錯誤，非 template 缺陷，但暴露真實風險】refiner subagent 派工時若只給相對路徑（如 `docs/src/content/docs/core-rules/combat.md`），實測有 3 次直接寫進錯誤專案（game-doc-template 本身的 `.state/` 目錄），而不是目標專案 `cairn-barebones-docs`**。原因：subagent 的實際 cwd 繼承自它被啟動時的環境，而非目標專案路徑；relative path 在 prompt 裡沒有錨定專案根目錄時，subagent 會用自己當下的 cwd 解析，兩者不保證一致。此次由於 `.state/` 已在 game-doc-template 的 `.gitignore` 中，未造成實際汙染，事後人工搬移檔案修正。
     這雖然是我（orchestrator）派工時的失誤，但也指出一個 template 本身可以強化的地方：`super-translate/refiner-prompt.md`、`reviewer-prompt.md`、`translator-prompt.md` 裡的 `<TARGET_FILE>`／`<DRAFT_FILE>` 佔位符範例都是相對路徑（例如 `Path: <TARGET_FILE>`），沒有明確要求 orchestrator 必須代入絕對路徑。建議在這三個 prompt template 加一行提醒：「orchestrator 代入路徑時必須使用絕對路徑，不可用相對路徑」，降低未來再次發生同類寫錯專案事故的機率。
+    根因補充：實測發現 shell 工具每次呼叫之間 cwd 會重置回 session 的 primary working directory（本例是 game-doc-template），並非只是「忘記打絕對路徑」這麼單純——即使 orchestrator 自己用 `cd cairn-barebones-docs && ...` 執行單一指令沒問題，任何 subagent 只要沒有在自己的 prompt 裡拿到絕對路徑，就一定會落在錯的專案，這是環境層級的固定行為，不是偶發。
+
+## 瀏覽器實際驗收（Astro dev server, localhost:4321）
+
+19. **【正面，視覺驗證】`bun dev` 啟動後，用 `agent-browser` 逐頁檢視 5 個已翻譯檔案，H3 小節標題修正（Finding #17 的修法）在實際渲染中完全生效**：combat.md、npcs-and-magic.md、player-characters.md、dungeon-exploration.md 的 Starlight 右側「本頁內容」側欄，現在都完整列出所有小節（分別是 11、8、8、11 項），不再像修正前只顯示 1-2 項。npcs-and-magic.md 的 Reactions 表格與 combat.md 的 Scars 表格都正確渲染成規範的多欄 Markdown table。combat.md 的 NPC 首次加註、後續退回中文的 Voice 規則 6 也在畫面上正確呈現。首頁（版權宣告、製作名單含「翻譯：洪偉」）與暗黑主題配色渲染正常，無破版。
+    對比組（overview-principles/index.md，此檔案在系統性 H3 缺陷被發現「之前」就先跑完 refiner）在瀏覽器裡清楚可見同一缺陷仍然存在：「本頁內容」側欄只列出 3 項（總覽/玩家原則/守護人原則），「自主性」「交談」「危險」「寶藏」等 14 個小節完全不在導覽中——用實際渲染結果印證了 Finding #17 的影響範圍與嚴重度，而不只是理論推測。此檔案刻意保留未補修，作為「修法前」對照證據。
+
+20. **【新發現，比 Finding #15 更明確的案例】在完全未翻譯的 `character-creation/basics.md` 頁面（尚未進入 super-translate 流程）用瀏覽器實際檢視，看到 PDF 頁碼殘留數字直接插在一份連續編號 1-100 的隨機姓名表中間**：例如清單跑到「17 Bryn Cooper」後，緊接著出現一行獨立的「24」，然後才接「18 Cai Crowther」繼續往下編號——頁碼「24」硬生生插斷了正在進行中的「17 → 18」編號序列。這比 Finding #15 描述的「裸數字與表格價格混淆」更嚴重：這裡頁碼數字本身的格式（獨立一行的純數字）與清單項目編號完全相同形式，如果不細看上下文語意，機器或人工都很容易誤判成「這份表格從 1 跳到 17，然後又出現一個 24，是不是漏了項目」而去查源頭，或誤把它當成合法清單項目保留。進一步印證 split_chapters.py／extract_pdf.py 需要處理頁碼標記過濾。
