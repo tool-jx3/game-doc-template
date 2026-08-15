@@ -163,7 +163,7 @@ If `check-consistency` reports any violations → **stop. Do not silently fix an
 - **現在修正**：套用術語替換，重新驗證
 - **記錄下來，稍後統一處理**：先結束本次執行，違規清單留給下次術語決策時處理
 
-**Verification:** Both validation commands exit 0; `check-consistency` was actually invoked (not assumed clean) and either reports zero violations or the user has explicitly chosen how to proceed; all tasks marked `completed`.
+**Verification:** Both validation commands exit 0; `check-consistency` was actually invoked (not assumed clean) and either reports zero violations or the user has explicitly chosen how to proceed; `data/translation-progress.json` shows every target file `completed` (mirror the task list too if one is in use).
 
 ## Prompt Templates
 

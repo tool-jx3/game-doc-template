@@ -31,6 +31,32 @@ Task tool (general-purpose):
     - Do not ask user whether to split.
     - Avoid keeping a section topology that would render as a one-item sidebar menu unless it is intentionally a direct-link singleton.
 
+    ## Critical: Never Split a Table or Enumerated List Across a File Boundary
+
+    The TOC planner already applied this rule (see split-planner-prompt.md); every
+    boundary you MOVE must re-apply it — a word-count rebalance that shifts a
+    boundary back into the middle of a d100 table reintroduces the exact defect
+    the TOC planner just avoided.
+
+    Before finalizing any adjusted page-range boundary, check the source content on
+    both sides of that boundary page for an in-progress numbered/lettered table or
+    list whose numbering continues past the boundary. If you find one:
+
+    - Prefer keeping the entire table in the EARLIER file, even if that file ends
+      above the word-count target.
+    - Otherwise move the boundary earlier so the whole table starts in the LATER file.
+    - If neither fits, keep the necessary split but add a `risk_notes` entry naming
+      the exact table, the item-number range that would open the next file, and the
+      resolution you chose — never a silent split.
+
+    Self-check after rebalancing: for each file boundary you touched, would the
+    NEXT file's first content (right after frontmatter) be a bare list/table item
+    whose number is greater than 1? If so, treat it as a rule violation and resolve
+    it before finalizing.
+
+    Carry forward, verbatim, any `risk_notes` entries the TOC planner's draft
+    already recorded; append your own rather than replacing them.
+
     ## Heading-Level Constraint (Critical)
 
     Only split at heading levels that appear in the source TOC or are H2-level
@@ -72,6 +98,7 @@ Task tool (general-purpose):
       },
       "wordcount_estimate": [{ "file": "section-slug/subtopic-slug", "words": 1800 }],
       "exceptions": [{ "file": "...", "reason": "TOC constraint" }],
+      "risk_notes": [],
       "unresolved_critical": []
     }
 ```

@@ -8,6 +8,7 @@
 ## 2. Project-level Codex tiering preference
 
 - [x] 2.1 Define the `style-decisions.json` shape for the preference. Done in `codex-tier.md` §1: `{ "codex_tier": { "enabled": true|false } }`.
+- [x] 2.5 (post-review fix) Registered `codex_tier` (`enabled` / `install_declined` / `model`) in `style-decisions.schema.json` — the §1 persistence shape was previously rejected by schema validation, so the preference could never be saved. Decline-memory also moved from agent memory into `codex_tier.install_declined` (portable across machines), and §2 gained an explicit probe-failure branch.
 - [x] 2.2 Added a short pointer to `translate/codex-tier.md` §1 from `translate/SKILL.md` Step 1.
 - [x] 2.3 Added a short pointer from `super-translate/SKILL.md` Step 1.
 - [x] 2.4 Added a short pointer from `bilingual-translate/SKILL.md` Step 1.
@@ -40,6 +41,7 @@
 - [x] 8.4 Registered in `.claude/settings.json` (`PostToolUse`, matcher `Bash`, timeout 30).
 - [x] 8.5 Tested: fast no-op path for unrelated Bash commands (~0.04s); correctly extracts the writeback target and flags a forbidden-term hit against an isolated test glossary/file; correctly stays silent against the real (currently empty) project glossary; handles empty stdin and malformed JSON without error.
 - [x] 8.6 `rcc:hook-reviewer` found one real issue: the warning list was unbounded, risking silent truncation past `additionalContext`'s 10,000-char cap on a large glossary. Fixed — capped to 8 findings + an "N more" summary line, re-tested with 10 simultaneous hits to confirm the cap and summary line both fire correctly. Everything else (exit-code contract, settings.json placement/matcher, no shell injection, safe degradation) verified clean.
+- [x] 8.7 (post-review fix) Three gaps found in commit-range review, all fixed with tests (`scripts/tests/test_hooks.py`): (a) the hook now also matches Write|Edit targeting `docs/src/content/docs/**` — bilingual-translate publishes final files directly, with no `draft.py writeback` to hook; (b) the warning cites the entry's `zh` field as the approved usage instead of the English glossary key; (c) `_term_lib.find_term_spans` gained a CJK substring path — spaCy-English tokenization treated a Han run as one token, so forbidden Chinese variants embedded in Chinese prose were never detected (this also fixed `term_read.py`'s corpus-wide forbidden scan).
 
 ## 7. Verification
 

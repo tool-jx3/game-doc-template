@@ -210,7 +210,15 @@ Windows 使用者需啟用 `git config core.symlinks true` 並以系統管理員
 
 ### GitHub Pages（Public 專案推薦）
 
-1. 在 `docs/astro.config.mjs` 設定 `site` 與 `base`（`base` 要對應 repo 名稱）：
+1. 記錄部署設定，再由 `generate_nav.py` 寫入 `site` 與 `base`（`base` 要對應 repo 名稱）：
+
+   ```bash
+   uv run python scripts/style_decisions.py set-repository --url "https://github.com/<owner>/<repo-name>"
+   uv run python scripts/style_decisions.py set-deployment --target github-pages --base-path "/<repo-name>"
+   uv run python scripts/generate_nav.py
+   ```
+
+   `generate_nav.py` 會依 `style-decisions.json.deployment` 自動在 `docs/astro.config.mjs` 寫入：
 
    ```js
    export default defineConfig({
@@ -219,6 +227,8 @@ Windows 使用者需啟用 `git config core.symlinks true` 並以系統管理員
    	// ...
    });
    ```
+
+   **不要手動編輯這兩行**：手動放置的 `site`/`base` 區塊不在產生格式的位置，之後每次 `generate_nav.py` 執行都無法自動更新它（只會警告）；首頁與內文的絕對連結也只有在 `deployment` 有記錄時才會帶上 base path 前綴。`/new-project` 對 public 專案會自動完成 `set-deployment` 這一步。
 
 2. 新增 `.github/workflows/deploy.yml`：
 
@@ -265,11 +275,14 @@ Windows 使用者需啟用 `git config core.symlinks true` 並以系統管理員
            uses: actions/deploy-pages@v4
    ```
 
-3. 推送到 `main`，並啟用 Pages（Actions 來源）：
+3. 推送到 `main`，並啟用 Pages（Actions 來源）。兩種方式擇一：
 
-   ```bash
-   gh api repos/<owner>/<repo>/pages -X POST -f "build_type=workflow"
-   ```
+   - **網頁介面**：repo 的 **Settings → Pages → Build and deployment → Source** 選 **GitHub Actions**。
+   - **gh CLI**（若有安裝）：
+
+     ```bash
+     gh api repos/<owner>/<repo>/pages -X POST -f "build_type=workflow"
+     ```
 
 4. 之後每次推送到 `main` 都會自動重新部署，網址為 `https://<github-username>.github.io/<repo-name>/`。
 

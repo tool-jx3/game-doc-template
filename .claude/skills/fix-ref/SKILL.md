@@ -42,8 +42,8 @@ Treat only navigational references as candidates. Skip:
 For each candidate:
 
 1. Find the destination section that lives on that printed page.
-2. Prefer a document route such as `/rules/combat/` when the destination is a full page.
-3. Use an anchor such as `#damage` or `/rules/combat/#damage` when the sentence points to a subsection.
+2. Prefer a document route such as `/rules/combat/` when the destination is a full page (prefix the route with the base path per Link Rules below).
+3. Use an anchor such as `#damage` or `/rules/combat/#damage` when the sentence points to a subsection (the route half takes the same base-path prefix; a bare `#anchor` never does).
 4. Use the destination title as the link text whenever possible instead of keeping the raw page number.
 5. If a page range maps to multiple sections, replace it with one precise link or a small set of precise links that matches the sentence.
 6. If the target remains ambiguous after reasonable checking, stop and report the unresolved cases instead of guessing.
@@ -52,7 +52,7 @@ For each candidate:
 
 Replace one occurrence at a time. Keep the original sentence meaning, but rewrite the wording so the link reads naturally.
 
-Examples:
+Examples (shown with an empty base path; with base path `/my-repo` the same links become `/my-repo/rules/combat/` etc.):
 
 - `詳見第 12 頁。` -> `詳見[戰鬥流程](/rules/combat/)。`
 - `See page 34.` -> `See [Character Creation](/rules/character-creation/).`
@@ -71,7 +71,7 @@ After editing:
 
 ## Link Rules
 
-- Before writing any absolute route, read `style-decisions.json.deployment.base_path` (empty string if unset). Astro/Starlight does NOT auto-prepend the deploy base to literal `[text](/path/)` links written into page content — only Starlight-native constructs (sidebar `slug` entries, generated routes) resolve it automatically. A hardcoded absolute route missing this prefix 404s on any non-root deploy (e.g. a GitHub Pages project site).
+- Before writing any absolute route, resolve the base path with the same rule as `generate_nav.py`'s `deployment_base_path()`: read `style-decisions.json.deployment`; the base path is `deployment.base_path` ONLY when `deployment.target == "github-pages"` — for any other target (unset, `root`) treat it as empty even if a stale `base_path` value is still present from an earlier target. Astro/Starlight does NOT auto-prepend the deploy base to literal `[text](/path/)` links written into page content — only Starlight-native constructs (sidebar `slug` entries, generated routes) resolve it automatically. A hardcoded absolute route missing this prefix 404s on any non-root deploy (e.g. a GitHub Pages project site), and one carrying a stale prefix 404s on a root deploy.
 - Use absolute internal routes from the docs root, prefixed with the base path: `<base_path>/rules/basic-moves/` (e.g. `/rules/basic-moves/` when base_path is empty, `/my-repo/rules/basic-moves/` when base_path is `/my-repo`)
 - Use anchors for same-page references: `#damage` (anchors never need the base path — they don't change the route)
 - Use combined route plus anchor for cross-page subsections: `<base_path>/rules/combat/#damage`

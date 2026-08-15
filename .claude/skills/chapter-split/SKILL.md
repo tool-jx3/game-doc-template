@@ -69,7 +69,7 @@ Split policy for both planners:
 4. Dispatch toc planner using `./split-planner-prompt.md` to generate TOC-aligned draft `chapters_config`.
 5. Dispatch wordcount planner using `./split-wordcount-planner-prompt.md` to rebalance file granularity based on word count while preserving TOC order.
 6. If topology planner or wordcount planner reports unresolved critical issues, stop and ask user in Traditional Chinese before writing the final config.
-7. Read the toc planner's `risk_notes` even when there is no `unresolved_critical` entry — `risk_notes` is where a table/list-split-across-boundary conflict (see `split-planner-prompt.md`) gets recorded when neither adjustment fits. Report any non-empty `risk_notes` to the user in Traditional Chinese before writing the final config; do not silently accept a boundary that cuts through a table.
+7. Read BOTH planners' `risk_notes` even when there is no `unresolved_critical` entry — `risk_notes` is where a table/list-split-across-boundary conflict (see `split-planner-prompt.md` and the same rule in `split-wordcount-planner-prompt.md`) gets recorded when neither adjustment fits. The wordcount planner runs last and is the one whose boundaries actually land, so its `risk_notes` (which must carry the toc planner's forward) is authoritative. Report any non-empty `risk_notes` to the user in Traditional Chinese before writing the final config; do not silently accept a boundary that cuts through a table.
 
 ### Step 4: Finalize Config and Image Policy
 
