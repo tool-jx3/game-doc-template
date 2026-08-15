@@ -52,14 +52,20 @@ else:
     completed = sum(1 for c in chapters if c.get("status") == "completed")
     lines = [f"{completed}/{total} chapters completed"]
 
+    KNOWN_STATUSES = {"completed", "in_progress", "not_started"}
     in_progress = [c for c in chapters if c.get("status") == "in_progress"]
     not_started = [c for c in chapters if c.get("status") == "not_started"]
+    # Anything else (missing status, hand-edited value, e.g. "blocked") must
+    # still be listed: dropping it makes the count and the listing disagree
+    # and the orchestrator plans batches as if the chapter didn't exist.
+    other = [c for c in chapters if c.get("status") not in KNOWN_STATUSES]
 
-    def fmt(c):
+    def fmt(c, with_status=False):
         title = c.get("title", c.get("id", "?"))
         fpath = c.get("file", "")
         fname = fpath.split("/")[-1] if fpath else ""
-        return f"  {title} ({fname})"
+        suffix = f" [status: {c.get('status', '(missing)')}]" if with_status else ""
+        return f"  {title} ({fname}){suffix}"
 
     if in_progress:
         lines.append(f"in_progress ({len(in_progress)}):")
@@ -71,6 +77,9 @@ else:
         remaining = len(not_started) - len(shown)
         if remaining > 0:
             lines.append(f"  …and {remaining} more (run progress_read.py for the full list)")
+    if other:
+        lines.append(f"other/unrecognized status ({len(other)}):")
+        lines.extend(fmt(c, with_status=True) for c in other)
     print("\n".join(lines))
 PYEOF
 )

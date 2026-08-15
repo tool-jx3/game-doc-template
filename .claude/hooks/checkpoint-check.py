@@ -24,9 +24,11 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DOCS_CONTENT_DIR = "docs/src/content/docs"
 
-# ~2x the skills' default batch size (5) — avoids firing at the expected
-# "just finished this batch, about to commit" moment, only flags when a
-# checkpoint has clearly been skipped for 1.5-2+ batches.
+# The skills' documented default batch size, quoted in the warning copy.
+BATCH_SIZE = 5
+# ~2x the batch size — avoids firing at the expected "just finished this
+# batch, about to commit" moment, only flags when a checkpoint has clearly
+# been skipped for 1.5-2+ batches.
 WARN_THRESHOLD = 10
 
 
@@ -35,7 +37,10 @@ def count_uncommitted_docs_changes() -> int:
         # -uall: without it, a wholly-new untracked chapter subdirectory collapses
         # into one "?? path/" line and every file inside it is invisible to the
         # .md/.mdx filter below — exactly the mega-batch case this hook exists to catch.
-        ["git", "status", "--short", "-uall", "--", DOCS_CONTENT_DIR],
+        # core.quotePath=false: with the default, non-ASCII paths (the norm for
+        # Chinese-named chapter files) render as quoted escape sequences ending in
+        # '"', which the suffix filter would silently drop.
+        ["git", "-c", "core.quotePath=false", "status", "--short", "-uall", "--", DOCS_CONTENT_DIR],
         capture_output=True,
         text=True,
         cwd=PROJECT_ROOT,
@@ -45,9 +50,19 @@ def count_uncommitted_docs_changes() -> int:
         return 0
     lines = [
         line for line in result.stdout.splitlines()
-        if line.strip().lower().endswith((".md", ".mdx"))
+        # Paths with spaces/special characters stay quoted even with
+        # quotePath=false, so tolerate a trailing quote before the suffix check.
+        if line.strip().rstrip('"').lower().endswith((".md", ".mdx"))
     ]
     return len(lines)
+
+
+def build_warning_message(count: int) -> str:
+    return (
+        f"⚠️ Checkpoint 提醒（僅供參考，可能誤報）：{DOCS_CONTENT_DIR} 下有 {count} 個已修改但尚未 commit 的檔案，"
+        f"超過警戒值 {WARN_THRESHOLD}（約兩個批次）。SKILL.md 要求每個 batch（預設 {BATCH_SIZE} 檔）完成後立刻 commit"
+        "（`progress: X/Y`），建議現在補上 checkpoint commit 再繼續下一批。"
+    )
 
 
 def main() -> None:
@@ -68,11 +83,7 @@ def main() -> None:
         if count <= WARN_THRESHOLD:
             sys.exit(0)
 
-        message = (
-            f"⚠️ Checkpoint 提醒（僅供參考，可能誤報）：{DOCS_CONTENT_DIR} 下有 {count} 個已修改但尚未 commit 的檔案，"
-            f"超過建議的批次大小（{WARN_THRESHOLD}）。SKILL.md 要求每個 batch 完成立刻 commit（`progress: X/Y`），"
-            "建議現在補上 checkpoint commit 再繼續下一批。"
-        )
+        message = build_warning_message(count)
         print(json.dumps({
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",

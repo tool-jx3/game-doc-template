@@ -8,9 +8,10 @@ Warns (never blocks) when a just-written-back translation file contains:
   skipped heading levels) that an LLM reviewer pass can miss — confirmed in
   practice: a broken bold marker once survived a full reviewer+refiner pass.
 
-Backstops Codex-authored drafts (routed via `codex exec`, which bypasses
-Claude's Write/Edit tools) as well as Claude-authored ones, since both flow
-through `draft.py ... writeback` before landing in published docs content.
+Coverage: fires on `draft.py ... writeback` Bash commands (the choke point for
+translate/super-translate content, Codex- and Claude-authored alike) AND on
+Write/Edit tool calls targeting files under docs/src/content/docs — the path
+bilingual-translate uses to publish final files directly without a writeback.
 
 Advisory only: every check here can false-positive (a forbidden variant
 inside a code block or proper noun; a legitimate `***bold italic***`; a
@@ -26,6 +27,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+DOCS_CONTENT_DIR = Path("docs") / "src" / "content" / "docs"
 
 WRITEBACK_RE = re.compile(r"draft\.py\s+(?:--skill\s+\S+\s+)?writeback\s+(\S+)")
 FENCED_CODE_RE = re.compile(r"```.*?```", re.DOTALL)
@@ -44,6 +46,40 @@ def extract_writeback_target(command: str) -> str | None:
     return match.group(1).strip("'\"")
 
 
+def extract_check_target(data: dict) -> Path | None:
+    """Resolve the docs-content file this tool call published, if any.
+
+    - Bash: a `draft.py ... writeback <path>` command (translate/super-translate,
+      Codex- and Claude-authored drafts alike).
+    - Write/Edit: a file under docs/src/content/docs (bilingual-translate writes
+      final files directly, with no writeback command to hook).
+    """
+    tool_name = data.get("tool_name")
+    tool_input = data.get("tool_input", {})
+
+    if tool_name == "Bash":
+        target = extract_writeback_target(tool_input.get("command", ""))
+        if not target:
+            return None
+        path = Path(target)
+        return path if path.is_absolute() else PROJECT_ROOT / path
+
+    if tool_name in ("Write", "Edit"):
+        raw = tool_input.get("file_path", "")
+        if not raw:
+            return None
+        path = Path(raw)
+        if not path.is_absolute():
+            path = PROJECT_ROOT / path
+        try:
+            path.relative_to(PROJECT_ROOT / DOCS_CONTENT_DIR)
+        except ValueError:
+            return None
+        return path
+
+    return None
+
+
 def check_file_for_forbidden_terms(content: str) -> list[str]:
     """Return warning lines for forbidden term variants found in content."""
     sys.path.insert(0, str(SCRIPTS_DIR))
@@ -55,10 +91,16 @@ def check_file_for_forbidden_terms(content: str) -> list[str]:
     for term, entry in glossary.items():
         if term == "_meta" or not is_managed_term(term, entry):
             continue
+        # The approved usage in Chinese prose is the entry's zh translation, not
+        # the (usually English) glossary key — citing the key would tell the
+        # agent to substitute an English word into Chinese text.
+        approved = entry.get("zh") or term
         for forbidden in entry.get("forbidden", []):
             hits = find_term_spans(content, forbidden)
             if hits:
-                warnings.append(f"「{forbidden}」出現 {len(hits)} 次（術語表核准用法為「{term}」）")
+                warnings.append(
+                    f"「{forbidden}」出現 {len(hits)} 次（術語表核准譯名為「{approved}」，原文 {term}）"
+                )
     return warnings
 
 
@@ -106,18 +148,9 @@ def main() -> None:
             sys.exit(0)
         data = json.loads(input_data)
 
-        if data.get("tool_name") != "Bash":
+        file_path = extract_check_target(data)
+        if file_path is None:
             sys.exit(0)
-
-        command = data.get("tool_input", {}).get("command", "")
-        if "draft.py" not in command or "writeback" not in command:
-            sys.exit(0)
-
-        target = extract_writeback_target(command)
-        if not target:
-            sys.exit(0)
-
-        file_path = (PROJECT_ROOT / target) if not Path(target).is_absolute() else Path(target)
         if not file_path.is_file() or file_path.suffix.lower() not in (".md", ".mdx"):
             sys.exit(0)
 
