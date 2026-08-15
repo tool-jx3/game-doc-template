@@ -11,11 +11,6 @@ Maintain glossary quality and enforce terminology consistency across all transla
 
 **Core principle:** Glossary is the source of truth; validation must run before and after any terminology update.
 
-## Interaction Rules
-
-- All user interaction and term translations must use Traditional Chinese (zh-TW, Taiwan usage).
-- Do not use Simplified Chinese or Hong Kong-specific wording in user-facing text or glossary entries.
-
 ## The Process
 
 ### Step 1: Load Glossary Baseline
@@ -27,7 +22,7 @@ Maintain glossary quality and enforce terminology consistency across all transla
 uv run python scripts/validate_glossary.py
 ```
 
-3. Create TodoWrite items for candidate generation, decisions, and verification.
+3. Authoritative state is `glossary.json` itself, checked by `validate_glossary.py` and `term_read.py`. If a task-tracking tool is available in this session, create items for candidate generation, decisions, and verification.
 
 ### Step 2: Generate and Classify Candidates
 
@@ -98,8 +93,8 @@ Check for:
 
 ## Progress Sync Contract (Required)
 
-1. Track each term candidate and decision with TodoWrite.
-2. Mark a term item complete only after `term_read.py` is clean for that change.
+1. Each term candidate's authoritative state is its entry in `glossary.json`; if using task tracking, track each candidate and decision with it too.
+2. Mark a term (and its item, if using task tracking) complete only after `term_read.py` is clean for that change.
 
 ## When to Stop and Ask for Help
 

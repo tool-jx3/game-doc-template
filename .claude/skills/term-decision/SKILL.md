@@ -12,11 +12,6 @@ Decide contested terms, record rationale, apply replacements, and verify consist
 
 **Core principle:** No global replacement without explicit term decision and verification.
 
-## Interaction Rules
-
-- All user interaction and candidate translations must use Traditional Chinese (zh-TW, Taiwan usage).
-- Do not use Simplified Chinese or Hong Kong-specific wording in user-facing text or term candidates.
-
 ## The Process
 
 ### Step 1: Resolve Decision Scope
@@ -28,7 +23,7 @@ Decide contested terms, record rationale, apply replacements, and verify consist
 - `term_read.py` inconsistency output
 - `term_generate.py` missing candidates
 - user-flagged terminology
-3. Create TodoWrite items per term.
+3. Each term's authoritative state is its `status` in `glossary.json`, set via `term_edit.py` (Step 4) — that is what `term_read.py` verifies. If a task-tracking tool is available in this session, create one item per term for visibility.
 
 ### Step 2: Prepare Decision Brief
 
@@ -75,8 +70,8 @@ uv run python scripts/term_read.py --fail-on-forbidden
 
 ## Progress Sync Contract (Required)
 
-1. One TodoWrite item per term decision.
-2. Mark replacement item complete only after verification passes.
+1. Each term decision is only final once persisted to `glossary.json`/`style-decisions.json` via `term_edit.py`; if using task tracking, one item per term decision.
+2. Mark a term (in `glossary.json` and, if using task tracking, its item) complete only after verification passes.
 
 ## When to Stop and Ask for Help
 

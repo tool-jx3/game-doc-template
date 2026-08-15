@@ -1,0 +1,64 @@
+config_version: 2
+
+migration:
+  completed: true
+  initial_at: "2026-08-15"
+  last_at: "2026-08-15"
+  last_rcc_version: "13.1.0"
+
+release_automation:
+  decision: declined
+  tool: none
+  configured_at: "2026-08-15"
+  notes: "game-doc-template is a documentation template project, not a published package — no versioned releases to automate."
+
+settings_scope:
+  safety_bypass: .claude/settings.json
+  permissions: .claude/settings.local.json
+  hooks: .claude/settings.json
+  personal_overrides: .claude/settings.local.json
+  user_global: ~/.claude/
+
+artifacts:
+  root: .rcc/
+  memory: .rcc/memory/
+  validation: .rcc/validation/
+  archive: .rcc/archive/
+
+decisions_log:
+  - date: "2026-08-15"
+    topic: rcc-migration-scope
+    decision: "Scope this migration pass to the translation-flow skills only (translate, super-translate, bilingual-translate, chapter-split, term-decision, terminology-management), not the full agent system."
+    rationale: "User explicitly asked to refactor 'this translation skills' set, not the whole project."
+  - date: "2026-08-15"
+    topic: standards-source
+    decision: "Treat the currently-effective global rules (~/.claude/CLAUDE.md plus shared/communication.md, engineering.md, context-management.md, git-safety.md, dependencies.md, chinese-writing.md, deployment.md, clean-architecture.md) as the 'new standards' to reconcile skills against."
+    rationale: "User confirmed 'my new standards and model recommendations' refers to the global rules currently in effect for this session, not this project's own CLAUDE.md."
+  - date: "2026-08-15"
+    topic: release-automation
+    decision: "Declined — no release automation tool configured."
+    rationale: "Documentation template repo, not a versioned package."
+  - date: "2026-08-15"
+    topic: safety-bypass-location
+    decision: "Safety rules live in .claude/settings.json (team-shared, checked in)."
+    rationale: "User chose the team-shared/checked-in option over personal or user-global scope."
+  - date: "2026-08-15"
+    topic: task4-routing
+    decision: "Applied the confirmed Task 3 Rules Refactoring Proposal directly via writing-skills-style edits, instead of launching the full analyzing->brainstorming->planning->applying->reviewing->refactoring chain."
+    rationale: "A concrete 5-item proposal, grounded in files actually read, was already presented and confirmed by the user (繼續) inside Task 3's own confirm-and-act step. Running the full Established-maturity chain would re-derive the same proposal at much higher cost and beyond the user's explicitly narrowed scope (six translation-flow skills, not the whole agent system)."
+  - date: "2026-08-15"
+    topic: task-tracking-tool-fix
+    decision: "Replaced 'MANDATORY: create tasks using TaskCreate/TodoWrite' in translate, super-translate, bilingual-translate, term-decision, terminology-management, and chapter-split with conditional wording: the durable/verifiable mechanism (progress JSON files for translate/super-translate/bilingual-translate; glossary.json + validate_glossary.py/term_read.py for term-decision/terminology-management; per-step Verification checks for chapter-split) is mandatory, and task-tracking-tool usage is optional visibility layered on top, used only if such a tool is available in the running session."
+    rationale: "TaskCreate and TodoWrite were both confirmed absent from this session's tool surface (ToolSearch found neither), yet 3 skills required TaskCreate and 3 required TodoWrite as a MANDATORY first step. Framed as a session-local diagnosis this would rot and could silently degrade other harnesses (e.g. .gemini/commands/*.toml wrappers) that may have these tools; framed as a condition on tool availability it holds regardless of environment."
+  - date: "2026-08-15"
+    topic: native-chinese-quality-checks
+    decision: "Added a checkable 'native Chinese quality' item to translate/SKILL.md's and bilingual-translate/SKILL.md's self-review checklists, and replaced super-translate/reviewer-prompt.md's vague 'zh-TW readability and tone' criterion with the same checkable formulation: flag English clause order/structure, flag ungrounded 四字成語/literary flourish, flag technical terms translated where glossary.json/style-decisions.json says to keep the original English form."
+    rationale: "User's confirmed 'new standards' include ~/.claude/rules/chinese-writing.md (avoid translation-ese, avoid literary clichés, keep technical terms in original form), which none of the three translation-execution skills previously checked for explicitly."
+  - date: "2026-08-15"
+    topic: hook-timeout-outer-cap
+    decision: "Raised .claude/settings.json's PostToolUse hook registration timeout for pytest-check.py from 60s to 100s, to match/exceed the hook's own internal subprocess timeout (raised to 90s in the PR #6 review-fix pass)."
+    rationale: "The outer harness-level timeout was killing the hook before its internal 90s timeout could ever fire, silently capping the effective margin back down to 60s. Discovered during a follow-up rcc-migrate pass over the same file; the PR #6 fix comment to the contributor was only partially true until this correction."
+  - date: "2026-08-15"
+    topic: skills-refactor-pass
+    decision: "Ran a targeted duplication/sediment/sprawl review over the same six translation-flow skills. Deleted the near-duplicate 'Interaction Rules' sections from term-decision/SKILL.md and terminology-management/SKILL.md (they restated CLAUDE.md Law 6/8/9 verbatim); folded their one novel constraint (avoid Hong Kong-specific wording) into CLAUDE.md Law 8. Left the Red Flags table overlap between translate/super-translate and the parametrized 'Resolve Scope and Preconditions' repetition across translate/super-translate/bilingual-translate as intentional — each skill is dispatched/read independently, and extracting these small blocks into a shared file would add an indirection cost exceeding the duplication cost."
+    rationale: "User asked for a simplification/de-duplication pass using the writing-great-skills vocabulary (duplication, sediment, sprawl, no-op). Findings were presented as a proposal before editing; user confirmed (同意)."

@@ -34,7 +34,7 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 
 **Law 6: Traditional Chinese Only**
 
-- All user-facing outputs must be Traditional Chinese.
+- All user-facing outputs — translated content, conversational replies, and every other interaction with the user — must be Traditional Chinese.
 - Translation target language is fixed to zh-TW (Taiwan usage).
 - Simplified Chinese is not allowed.
 - Mainland China-specific wording is not allowed.
@@ -52,16 +52,12 @@ Convert PDF game rulebooks into a Traditional Chinese Markdown documentation sit
 
 **Law 8: zh-TW Writing Conventions**
 
-- MUST use Traditional Chinese punctuation in all user-facing Chinese text（：，。、；「」『』（）……）
-- MUST avoid Mainland China-specific wording and prefer Taiwan usage
+- MUST use Traditional Chinese punctuation per `.claude/rules/docs-conventions.md` in all user-facing Chinese text
+- MUST avoid Mainland China-specific and Hong Kong-specific wording; prefer Taiwan usage
 
 **Law 9: User Consultation for Complex Terms**
 
 - For rare characters, puns, or culturally nuanced terms, MUST consult user before finalizing terminology decisions when ambiguity affects meaning or tone
-
-**Law 10: Traditional Chinese User Interaction**
-
-- MUST use Traditional Chinese in all user interactions and conversations
 
 </law>
 

@@ -37,9 +37,9 @@ Scan `data/markdown/*_pages.md`:
   4. Run `uv run python scripts/merge_multi.py chapters_*.json` to produce `chapters.json`
   5. Continue with split execution as normal (Step 5)
 
-### Step 2: Create TodoWrite
+### Step 2: Track Progress
 
-Create items for:
+Each stage below has its own explicit **Verification:** check (draft config paths, split/nav script exit codes, output validation in Step 6) — that is the authoritative record of what's done. If a task-tracking tool is available in this session, create one item per stage for visibility:
 - topology planning
 - split planning
 - image split policy
@@ -191,7 +191,7 @@ Task tool (general-purpose):
 
 ## Progress Sync Contract (Required)
 
-1. Keep TodoWrite updated at every step.
+1. If using task tracking, keep it updated at every step.
 2. Mark blockers immediately and include failing command/context.
 3. Mark split complete only after output validation succeeds.
 

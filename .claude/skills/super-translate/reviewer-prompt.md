@@ -56,7 +56,7 @@ Agent tool (general-purpose):
     5. Untranslated English — every English word in the draft that is not a proper code/notation/dice expression (e.g. `1d6`, `+2`) must be translated; this includes: body text, headings, table cells, game labels (status conditions, item tags, rule keywords/phrases such as "Stunned", "Heavy", "Ongoing", "Hold"); terminology must follow `<GLOSSARY_CONTENT>`; proper nouns must follow the policy in `<STYLE_CONTENT>` (if `proper_nouns.mode == keep_original`, untranslated proper nouns are allowed)
 
     Quality:
-    6. zh-TW readability and tone
+    6. Native Chinese quality: flag any sentence that keeps English clause order/structure instead of natural Chinese syntax; flag any 四字成語 or literary flourish not grounded in the source's meaning; flag any technical term translated where `<GLOSSARY_CONTENT>` or `<STYLE_CONTENT>` says to keep the original English form
     7. Full-width punctuation correctness
     8. Heading/frontmatter/table/dice format integrity
     9. No added heading of any level that restates `frontmatter.title`, and no invented overview heading when the source has no such heading
