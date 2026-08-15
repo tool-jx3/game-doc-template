@@ -23,12 +23,11 @@ Single-pass bilingual translation. Produces documents where each Chinese paragra
 
 **Core principle:** Draft-first with bilingual_prep.py placeholders. Write directly to bilingual output dir. No multi-round review loop.
 
-## Task Initialization (MANDATORY)
+## Progress Tracking
 
-Before ANY action, create tasks using TaskCreate:
-- One task per target file
-- One task for batch checkpoint
-- One task for final verification
+Authoritative state lives in `data/translation-progress-bilingual.json`, kept in sync via `progress_edit.py`/`progress_read.py` at each step below — this is what later runs and other skills read, and it survives across sessions.
+
+If a task-tracking tool is available in this session, mirror per-file progress into it for visibility (one task per target file, one for batch checkpoint, one for final verification). Treat it as optional visibility on top of the progress file, not the source of truth.
 
 ## The Process
 
@@ -52,7 +51,9 @@ Before ANY action, create tasks using TaskCreate:
 
 3. Display selected files to user in Traditional Chinese before proceeding.
 
-**Verification:** Target file list confirmed; all required files and mode settings present.
+4. Resolve the project's Codex draft-tiering preference per `../translate/codex-tier.md` §1 (asked once per project, then silent).
+
+**Verification:** Target file list confirmed; all required files and mode settings present; Codex tiering preference resolved.
 
 ### Step 2: Terminology Preflight (Fail-Closed)
 
@@ -83,22 +84,25 @@ uv run python scripts/bilingual_prep.py <SOURCE_FILE> <DRAFT_FILE>
 
 For each target file:
 
-1. Mark task `in_progress`
+1. If using task tracking, mark the item `in_progress`
 2. Read draft, `glossary.json`, and `style-decisions.json`
-3. For each `<!-- TODO: 翻譯 -->` placeholder: replace it with the Chinese translation of the English text in the immediately following blockquote line(s)
+3. For each `<!-- TODO: 翻譯 -->` placeholder: replace it with the Chinese translation of the English text in the immediately following blockquote line(s).
+
+   If Codex tiering is enabled and available (`../translate/codex-tier.md` §2), delegate this placeholder-filling to Codex per `../translate/codex-tier.md` §3 — the prompt MUST state that only `<!-- TODO: 翻譯 -->` placeholders may be replaced and every line starting with `>` must be left byte-for-byte untouched. On any Codex failure, fall back to doing it yourself per `../translate/codex-tier.md` §5.
 4. Update frontmatter `title` to Traditional Chinese; add `bilingual: true` if not present
-5. Single-pass self-review:
+5. Single-pass self-review — unconditional and identical whether Codex or you filled the placeholders:
    - Any `<!-- TODO: 翻譯 -->` left untranslated?
    - Glossary violations?
    - Full-width punctuation correct in Chinese text?
    - English blockquote lines (starting with `>`) preserved exactly — no modifications?
    - Content contamination (paragraphs with no source)?
+   - Native Chinese quality: any sentence that keeps English clause order/structure instead of natural Chinese syntax? Any 四字成語 or literary flourish that isn't grounded in the source's meaning? Any technical term translated where `glossary.json` or `style-decisions.json` says to keep the original English form?
 6. Write final file to `docs/src/content/docs/bilingual/<path>`
 7. Update progress:
    ```bash
    uv run python scripts/progress_edit.py --progress-file data/translation-progress-bilingual.json --file <TARGET_FILE> --status completed
    ```
-8. Mark task completed
+8. If using task tracking, mark the item completed
 
 **Verification:** Self-review checklist passes; output file written; progress JSON updated.
 
@@ -129,9 +133,9 @@ uv run python scripts/validate_glossary.py
 uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
 ```
 
-Mark final verification task completed.
+If using task tracking, mark the final verification item completed.
 
-**Verification:** Both commands exit 0; all tasks completed.
+**Verification:** Both commands exit 0; `data/translation-progress-bilingual.json` shows all target files `completed`.
 
 ## Red Flags
 
@@ -142,6 +146,7 @@ Mark final verification task completed.
 | "translation-progress-bilingual.json doesn't exist, skip tracking" | Create it with `progress_edit.py --create-if-missing`. |
 | "One file done, no need for checkpoint" | Every completed batch gets a commit. |
 | "Skip terminology preflight, it was fine last time" | Glossary changes between runs. Always preflight. |
+| "Codex filled this, skip the self-review" | Review is unconditional regardless of who/what filled the placeholders. |
 
 ## When to Stop and Ask for Help
 

@@ -24,12 +24,11 @@ Iterative translation pipeline: `translator → reviewer → md-reviewer → ref
 | md-reviewer | haiku | 清單式結構核對，無需判斷力 |
 | refiner | sonnet | 執行 reviewer 的具體修改清單 |
 
-## Task Initialization (MANDATORY)
+## Progress Tracking
 
-Before ANY action, create tasks using TaskCreate:
-- One task per target file (sub-steps: draft, review, refine, writeback)
-- One task for batch checkpoint
-- One task for final verification
+Authoritative state lives in `data/translation-progress.json`, kept in sync via `progress_edit.py`/`progress_read.py` at each step below — this is what later runs and other skills read, and it survives across sessions.
+
+If a task-tracking tool is available in this session, mirror per-file progress into it for visibility (one task per target file with draft/review/refine/writeback sub-steps, one for batch checkpoint, one for final verification). Treat it as optional visibility on top of the progress file, not the source of truth.
 
 ## The Process
 
@@ -54,7 +53,9 @@ Before ANY action, create tasks using TaskCreate:
         是否繼續？或請指定其他範圍。
         ```
 
-**Verification:** Target file list confirmed by user; all 3 required files exist.
+3. Resolve the project's Codex draft-tiering preference per `../translate/codex-tier.md` §1 (asked once per project, then silent). This only affects the translator step (Step 4) — reviewer, md-reviewer, and refiner stay as specified in the model routing table above regardless.
+
+**Verification:** Target file list confirmed by user; all 3 required files exist; Codex tiering preference resolved.
 
 ### Step 2: Terminology Preflight (Fail-Closed)
 
@@ -83,7 +84,7 @@ Read `style-decisions.json.translation_mode.mode`. If missing, ask user:
 
 **For each target file, run the pipeline:**
 
-1. Update task → `in_progress`; update progress:
+1. If using task tracking, update the item → `in_progress`; update progress:
    ```bash
    uv run python scripts/progress_edit.py --file <TARGET_FILE> --status in_progress
    ```
@@ -91,11 +92,13 @@ Read `style-decisions.json.translation_mode.mode`. If missing, ask user:
    ```bash
    uv run python scripts/draft.py --skill super-translate path <TARGET_FILE>
    ```
-3. **Dispatch translator** (Agent tool, general-purpose, **model: opus**) using `./translator-prompt.md`
-   - Inline all context: source, glossary, style, draft path
-   - Translator must not read files; all context is pre-inlined
-   - Translator must complete a block-shape self-check before returning: frontmatter, heading levels, list structure, blank-line boundaries, tables, code fences, admonitions, images, and MDX/import blocks must still align with the source
-4. Read draft content after translator returns
+3. **Dispatch translator:**
+   - If Codex tiering is enabled and available (`../translate/codex-tier.md` §2), delegate to Codex per `../translate/codex-tier.md` §3, using `./translator-prompt.md`'s constraints and required-output shape as the `--output-schema`. On any Codex failure, fall back to the Agent-tool dispatch below per `../translate/codex-tier.md` §5.
+   - Otherwise (or on fallback): **Dispatch translator** (Agent tool, general-purpose, **model: opus**) using `./translator-prompt.md`
+     - Inline all context: source, glossary, style, draft path
+     - Translator must not read files; all context is pre-inlined
+   - Either way, the translator step must complete a block-shape self-check before the pipeline continues: frontmatter, heading levels, list structure, blank-line boundaries, tables, code fences, admonitions, images, and MDX/import blocks must still align with the source
+4. Read draft content after the translator step returns
 5. **Dispatch reviewer** (Agent tool, general-purpose, **model: opus**) using `./reviewer-prompt.md`
    - Inline: source, draft, glossary, style
 6. **Dispatch Markdown reviewer** by invoking the `md-review` skill (Agent tool, general-purpose, **model: haiku**) using `../md-review/reviewer-prompt.md`
@@ -111,7 +114,7 @@ Read `style-decisions.json.translation_mode.mode`. If missing, ask user:
 
 **Unknown terms:** Run `term_edit.py --set-zh` workflow, then rerun file.
 
-**Parallel dispatch:** When batch has 2+ independent files and no shared terminology conflicts, dispatch multiple translator agents concurrently using Agent tool. Reviewer/refiner remain sequential per file.
+**Parallel dispatch:** When batch has 2+ independent files and no shared terminology conflicts, dispatch multiple translator steps concurrently — multiple `Agent`-tool calls, or multiple `codex exec` subprocesses if Codex-routed. If Codex-routed, cap concurrent `codex exec` processes independently of Agent-tool concurrency (start with 2-3 at a time) to avoid local resource or rate-limit pressure; reduce further on repeated failures. Reviewer/refiner remain sequential per file regardless.
 
 **Verification:** Per file: reviewer JSON and md-review JSON both return `"pass": true`, and no block-shape mismatch remains; otherwise iteration cap reached and user consulted.
 
@@ -126,11 +129,11 @@ uv run python scripts/draft.py --skill super-translate writeback <TARGET_FILE>
 ```bash
 uv run python scripts/progress_edit.py --file <TARGET_FILE> --status completed
 ```
-Update task → `completed`.
+If using task tracking, update the item → `completed`.
 
-If blocked: keep source unchanged, status stays `in_progress`, mark task blocked.
+If blocked: keep source unchanged, status stays `in_progress`; if using task tracking, mark the item blocked.
 
-**Verification:** Writeback script exits 0; `progress_edit.py` exits 0; task marked `completed`.
+**Verification:** Writeback script exits 0; `progress_edit.py` exits 0; `data/translation-progress.json` shows the file `completed`.
 
 ### Step 6: Batch Checkpoint
 
@@ -171,7 +174,7 @@ digraph super_translate {
     start [label="Resolve scope\n& preconditions", shape=box];
     preflight [label="Terminology\npreflight", shape=box];
     mode [label="Resolve\ntranslation mode", shape=box];
-    translate [label="Dispatch\ntranslator", shape=box];
+    translate [label="Dispatch translator\n(Codex or opus)", shape=box];
     review [label="Dispatch\nreviewer", shape=box];
     mdreview [label="Dispatch\nmd reviewer", shape=box];
     pass [label="Both pass?", shape=diamond];
@@ -201,7 +204,7 @@ digraph super_translate {
 
 ## Progress Sync Contract
 
-1. Sync tasks and progress (via `progress_edit.py`) at file start, every review loop, and file close.
+1. Sync `data/translation-progress.json` (via `progress_edit.py`), and the task list if one is in use, at file start, every review loop, and file close.
 2. NEVER defer sync until end-of-run.
 3. Create batch checkpoint commit immediately after each completed batch.
 
@@ -215,6 +218,7 @@ digraph super_translate {
 | "Skip terminology preflight, it was fine last time" | Glossary changes between runs. Always preflight. |
 | "One file left, no need for checkpoint commit" | Every completed batch gets a commit. No exceptions. |
 | "I can batch-replace with regex for speed" | Manual translation only. Script-generated prose is forbidden. |
+| "Codex wrote this draft, skip the reviewer/md-reviewer gate" | Both gates are unconditional regardless of which path produced the draft. |
 
 ## When to Stop and Ask
 

@@ -15,12 +15,11 @@ Single-pass translation of markdown content to Traditional Chinese with glossary
 
 **Core principle:** Draft first, verify before writeback, never overwrite source with unverified output.
 
-## Task Initialization (MANDATORY)
+## Progress Tracking
 
-Before ANY action, create tasks using TaskCreate:
-- One task per target file
-- One task for batch checkpoint
-- One task for final verification
+Authoritative state lives in `data/translation-progress.json`, kept in sync via `progress_edit.py`/`progress_read.py` at each step below (see Progress Sync Contract) — this is what later runs and other skills read, and it survives across sessions.
+
+If a task-tracking tool is available in this session, mirror per-file progress into it for visibility (one task per target file, one for batch checkpoint, one for final verification). Treat it as optional visibility on top of the progress file, not the source of truth.
 
 ## The Process
 
@@ -52,7 +51,9 @@ Before ANY action, create tasks using TaskCreate:
      4. Wait for user confirmation or override.
    - The selected target set for this run is one batch. If only one file is selected, that single file is the batch.
 
-**Verification:** Target file list confirmed; all required files exist.
+3. Resolve the project's Codex draft-tiering preference per `./codex-tier.md` §1 (asked once per project, then silent).
+
+**Verification:** Target file list confirmed; all required files exist; Codex tiering preference resolved.
 
 ### Step 2: Terminology Preflight (Fail-Closed)
 
@@ -92,7 +93,7 @@ Use the printed path as `<DRAFT_FILE>` for that file.
 
 For each target file:
 
-1. Mark task item `in_progress`
+1. If using task tracking, mark the item `in_progress`
 2. Update progress:
    ```bash
    uv run python scripts/progress_edit.py --file <TARGET_FILE> --status in_progress
@@ -102,8 +103,11 @@ For each target file:
    ```bash
    DRAFT_FILE=$(uv run python scripts/draft.py --skill translate path <TARGET_FILE>)
    ```
-   Translate to `$DRAFT_FILE`:
-   - Draft/source mapping is stored in `.state/translate/draft-manifest.json`; do not add translation metadata to frontmatter
+   Draft/source mapping is stored in `.state/translate/draft-manifest.json`; do not add translation metadata to frontmatter. Do NOT overwrite source file; write only to `$DRAFT_FILE`.
+
+   If Codex tiering is enabled and available (`./codex-tier.md` §2), delegate generating `$DRAFT_FILE` to Codex per `./codex-tier.md` §3, inlining the constraints below into the prompt. On any Codex failure, fall back to translating it yourself per `./codex-tier.md` §5.
+
+   Otherwise (or on fallback), translate to `$DRAFT_FILE` yourself:
    - Traditional Chinese only (Taiwan usage), no Simplified Chinese
    - Preserve markdown structure exactly (frontmatter, headings, lists, tables, links, code blocks)
    - Follow every applicable note in `style-decisions.json.translation_notes`
@@ -112,8 +116,7 @@ For each target file:
    - Preserve image links exactly; if an image link appears within the source flow for a paragraph, keep the same link but place it near the middle of the translated paragraph instead of splitting the paragraph into separate blocks
    - Use glossary mappings exactly
    - Manual translation only (no script-generated prose)
-   - Do NOT overwrite source file; write only to `$DRAFT_FILE`
-5. Self-review the draft against source:
+5. Self-review the draft against source — this step is unconditional and identical whether Codex or you generated `$DRAFT_FILE`:
    - Missing or truncated content?
    - Glossary violations?
    - Violated any item in `style-decisions.json.translation_notes`?
@@ -124,6 +127,7 @@ For each target file:
    - Full-width punctuation correct?
    - Content contamination: any paragraph or block that has no corresponding source in the original file?
    - Untranslated English: any English left untranslated (excluding code/dice notation such as `1d6`, `+2`)? Covers body text, headings, table cells, and game labels (status conditions, item tags, rule keywords/phrases). Terminology must match `glossary.json`; proper nouns follow `style-decisions.json` policy.
+   - Native Chinese quality: any sentence that keeps English clause order/structure instead of natural Chinese syntax? Any 四字成語 or literary flourish that isn't grounded in the source's meaning? Any technical term translated where `glossary.json` or `style-decisions.json` says to keep the original English form?
    - Fix any issues found in the draft directly
 6. Writeback:
    ```bash
@@ -134,7 +138,7 @@ For each target file:
    uv run python scripts/progress_edit.py --file <TARGET_FILE> --status completed
    ```
    Do NOT defer this update; run it before moving to the next file.
-8. Mark task item completed
+8. If using task tracking, mark the item completed
 
 **Unknown term handling:**
 
@@ -179,9 +183,9 @@ uv run python scripts/validate_glossary.py
 uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
 ```
 
-Mark final verification task item completed.
+If using task tracking, mark the final verification item completed.
 
-**Verification:** Both validation commands exit 0; all tasks completed.
+**Verification:** Both validation commands exit 0; `data/translation-progress.json` shows all target files `completed`.
 
 ## Flowchart
 
@@ -191,7 +195,7 @@ digraph translate {
     scope [label="Resolve scope\n& preconditions", shape=box];
     preflight [label="Terminology\npreflight", shape=box];
     mode [label="Resolve\ntranslation mode", shape=box];
-    translate [label="Translate file\n(self-review loop)", shape=box];
+    translate [label="Translate file\n(Codex or self,\nsame self-review loop)", shape=box];
     writeback [label="Writeback +\nupdate progress", shape=box];
     checkpoint [label="Batch checkpoint\n& commit", shape=box];
     more [label="More files?", shape=diamond];
@@ -208,7 +212,7 @@ digraph translate {
 
 ## Progress Sync Contract (Required)
 
-1. Sync task list and progress (via `progress_edit.py`) at file start and file close.
+1. Sync `data/translation-progress.json` (via `progress_edit.py`), and the task list if one is in use, at file start and file close.
 2. Never defer sync until end-of-run.
 3. Create the batch checkpoint commit immediately after batch completion; do not postpone it to a later batch.
 
@@ -224,6 +228,7 @@ digraph translate {
 | "I can batch-replace with regex for speed" | Manual translation only. Script-generated prose is forbidden. |
 | "I'll add a heading to restate the title" | Never restate `frontmatter.title` as a body heading. |
 | "I'll add an overview heading for clarity" | Never invent a heading that does not exist in the source. |
+| "Codex wrote this draft, skip the self-review" | Review is unconditional regardless of who/what generated the draft. |
 
 ## When to Stop and Ask for Help
 
