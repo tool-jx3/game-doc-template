@@ -88,6 +88,18 @@ class TestMergeConfigs:
         result = merge_configs(configs, output_dir_override="custom")
         assert result["output_dir"] == "custom"
 
+    def test_missing_order_is_omitted_not_a_crash(self):
+        config = self._make_config("a", "A", 1, "a.md")
+        del config["order"]
+        result = merge_configs([config])
+        assert "order" not in result["chapters"]["a"]
+
+    def test_missing_required_field_raises_value_error(self):
+        config = self._make_config("a", "A", 1, "a.md")
+        del config["title"]
+        with pytest.raises(ValueError, match="a"):
+            merge_configs([config])
+
 
 class TestValidateMerge:
     def test_duplicate_slugs_raises(self):

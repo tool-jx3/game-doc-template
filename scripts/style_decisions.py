@@ -29,6 +29,35 @@ def parse_bool(value: str) -> bool:
     raise argparse.ArgumentTypeError(f"無法解析布林值: {value}")
 
 
+def parse_bounded_number(value: str, low: float, high: float, label: str) -> str:
+    normalized = value.strip()
+    try:
+        number = float(normalized)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{label} 必須是數字: {value}") from None
+    if not low <= number <= high:
+        raise argparse.ArgumentTypeError(f"{label} 必須介於 {low:g} 到 {high:g} 之間: {value}")
+    return normalized
+
+
+def parse_overlay(value: str) -> str:
+    """遮罩不透明度，0 表示純色背景不加遮罩。"""
+    return parse_bounded_number(value, 0.0, 1.0, "overlay")
+
+
+def parse_hue(value: str) -> str:
+    """背景色相 --bg-h，單位為角度。"""
+    return parse_bounded_number(value, 0.0, 360.0, "bg-h")
+
+
+def parse_lightness(value: str) -> str:
+    """背景亮度 --bg-l，統一正規化為百分比字串。"""
+    normalized = parse_bounded_number(value.replace("%", ""), 0.0, 100.0, "bg-l")
+    number = float(normalized)
+    rendered = f"{number:g}"
+    return f"{rendered}%"
+
+
 def parse_credit_entry(value: str) -> dict[str, str]:
     if ":" not in value:
         raise argparse.ArgumentTypeError("credits entry 必須使用 '職責:姓名' 格式")
@@ -119,6 +148,18 @@ def cmd_set_images(args: argparse.Namespace) -> None:
         raise SystemExit("❌ set-images 至少需要一個欄位")
     merge_and_save(args.style, args.schema, patch)
     print(f"✓ 已更新圖片設定: {args.style}")
+
+
+def cmd_set_theme(args: argparse.Namespace) -> None:
+    patch: dict[str, Any] = {"theme": {}}
+    for key in ("mode", "overlay", "palette", "bg_h", "bg_l"):
+        value = getattr(args, key)
+        if value is not None:
+            patch["theme"][key] = value
+    if not patch["theme"]:
+        raise SystemExit("❌ set-theme 至少需要一個欄位")
+    merge_and_save(args.style, args.schema, patch)
+    print(f"✓ 已更新主題設定: {args.style}")
 
 
 def build_document_format_patch(args: argparse.Namespace) -> dict[str, Any]:
@@ -290,10 +331,29 @@ def build_parser() -> argparse.ArgumentParser:
     p_images.add_argument("--og")
     p_images.set_defaults(func=cmd_set_images)
 
+    p_theme = sub.add_parser("set-theme", help="Update theme settings recorded for docs/src/styles/custom.css.")
+    p_theme.add_argument("--mode", help="主題模式，例：dark-forced")
+    p_theme.add_argument(
+        "--overlay",
+        type=parse_overlay,
+        help="背景遮罩不透明度 0-1，對應 --overlay-opacity；純色背景請填 0",
+    )
+    p_theme.add_argument("--palette", help="色票說明，例：primary=330 粉、secondary=180 青")
+    p_theme.add_argument("--bg-h", type=parse_hue, help="背景色相 --bg-h，0-360")
+    p_theme.add_argument(
+        "--bg-l",
+        type=parse_lightness,
+        help="背景亮度 --bg-l，深色模式建議 5%%-16%%；可填 6 或 6%%",
+    )
+    p_theme.set_defaults(func=cmd_set_theme)
+
     p_format = sub.add_parser("set-document-format", help="Update document format decisions.")
     p_format.add_argument("--document-key")
     p_format.add_argument("--layout-profile", choices=("auto", "single-column", "double-column"))
-    p_format.add_argument("--page-text-engine", choices=("auto", "ocr", "pymupdf", "markitdown"))
+    p_format.add_argument(
+        "--page-text-engine",
+        choices=("auto", "ocr", "pymupdf", "markitdown", "opendataloader"),
+    )
     p_format.add_argument("--aside-note")
     p_format.add_argument("--aside-tip")
     p_format.add_argument("--aside-caution")

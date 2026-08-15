@@ -650,7 +650,7 @@ def main():
     source_type = detect_source_type(source_path)
 
     # 設定輸出目錄
-    project_root = Path(__file__).parent.parent
+    project_root = Path(__file__).resolve().parents[1]
     output_dir = project_root / "data" / "markdown"
     output_dir.mkdir(parents=True, exist_ok=True)
     strategy = resolve_page_text_strategy(

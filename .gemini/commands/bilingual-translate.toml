@@ -1,0 +1,12 @@
+description = "單次雙語翻譯（中文為主、英文引用，映射到 bilingual-translate skill）"
+prompt = """
+Use the `bilingual-translate` skill from workspace skills at `.gemini/skills/bilingual-translate/SKILL.md`.
+Follow that skill exactly end-to-end.
+
+User arguments: {{args}}
+
+Requirements:
+- Interact with user in Traditional Chinese.
+- Run terminology checks before translation according to project rules.
+- Report concrete file changes and executed commands.
+"""

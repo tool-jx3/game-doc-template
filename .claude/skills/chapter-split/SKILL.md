@@ -62,9 +62,9 @@ Split policy for both planners:
 - Use current docs tree and existing `chapters.json` as topology evidence when they exist.
 
 1. Create draft config path:
-   - `.claude/skills/chapter-split/.state/chapters.draft.json`
+   - `.state/chapter-split/chapters.draft.json`
 2. Create draft topology path:
-   - `.claude/skills/chapter-split/.state/topology.draft.json`
+   - `.state/chapter-split/topology.draft.json`
 3. Dispatch topology planner using `./split-topology-planner-prompt.md` to decide section grouping, direct-link singletons, and cross-document balance.
 4. Dispatch toc planner using `./split-planner-prompt.md` to generate TOC-aligned draft `chapters_config`.
 5. Dispatch wordcount planner using `./split-wordcount-planner-prompt.md` to rebalance file granularity based on word count while preserving TOC order.

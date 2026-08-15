@@ -1,62 +1,6 @@
 {
   "_meta": {
     "description": "風格決定記錄 - 翻譯用語選擇與原因",
-    "updated": "2026-03-10T04:39:46+00:00"
-  },
-  "translation_mode": {
-    "mode": "bilingual",
-    "options": {
-      "full": {
-        "name": "全文翻譯",
-        "description": "完整翻譯所有內容，保留原文結構與細節"
-      },
-      "summary": {
-        "name": "摘要翻譯",
-        "description": "精簡翻譯，提取重點規則，省略範例與冗長說明"
-      },
-      "bilingual": {
-        "name": "雙語模式",
-        "description": "中文翻譯為主，英文原文以 blockquote 附於每段之後"
-      }
-    },
-    "reason": "使用者選擇雙語模式測試"
-  },
-  "repository_link_source_of_truth": {
-    "decision": "Repo 資訊（visibility、url、show_on_homepage）統一存放於 style-decisions.json 的 repository 區塊",
-    "alternatives": [
-      "在首頁文件硬編碼 GitHub URL",
-      "僅在 docs/astro.config.mjs 設定 URL，不記錄於 style-decisions.json"
-    ],
-    "reason": "使用者要求 repo 資訊寫在 style-decisions.json。初始化（/init-doc）時首頁 index.md 需依此資料產生；公開 repo 顯示連結，私人 repo 不顯示。"
-  },
-  "document_format": {
-    "layout_profile": "double-column",
-    "aside_mapping": {
-      "note": ":::note",
-      "tip": ":::tip",
-      "caution": ":::caution",
-      "danger": ":::danger"
-    },
-    "component_usage": {
-      "cards": "用於章節導覽首頁",
-      "tabs": "用於替代規則或可選變體"
-    },
-    "table_conventions": {
-      "tables": "用於屬性、技能、裝備等結構化資料",
-      "dice_tables": "使用 Markdown 表格，保留原文骰值範圍標記"
-    }
-  },
-  "images": {
-    "preserve_images": false
-  },
-  "site": {
-    "title": "Year Zero Engine SRD",
-    "description": "Year Zero Engine 核心規則標準參考文件",
-    "tagline": "快速查閱 YZE 核心規則機制",
-    "intro": "Year Zero Engine 是多款 Free League 桌遊的核心規則系統，本站提供雙語版規則文件供查閱。"
-  },
-  "copyright": {
-    "text": "© 2023 Fria Ligan AB. Year Zero Engine Free Tabletop License.",
-    "show_on_homepage": true
+    "updated": ""
   }
 }

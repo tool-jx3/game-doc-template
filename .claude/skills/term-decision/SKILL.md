@@ -2,7 +2,6 @@
 name: term-decision
 description: Use when selecting terminology and applying consistent replacements across documentation.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Terminology Decision
@@ -12,6 +11,11 @@ disable-model-invocation: true
 Decide contested terms, record rationale, apply replacements, and verify consistency.
 
 **Core principle:** No global replacement without explicit term decision and verification.
+
+## Interaction Rules
+
+- All user interaction and candidate translations must use Traditional Chinese (zh-TW, Taiwan usage).
+- Do not use Simplified Chinese or Hong Kong-specific wording in user-facing text or term candidates.
 
 ## The Process
 

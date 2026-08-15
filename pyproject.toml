@@ -7,18 +7,14 @@ dependencies = [
     "inflect>=7.5.0",
     "jsonschema>=4.26.0",
     "markitdown[pdf]>=0.1.0",
+    "opendataloader-pdf[hybrid]>=2.2.0",
     "pymupdf>=1.24.0",
     "spacy>=3.8.11",
     "spacy-lookups-data>=1.0.5",
 ]
 
-[project.optional-dependencies]
-opendataloader = [
-    "opendataloader-pdf>=2.0.0",
-]
-
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.0.0",
 ]
 

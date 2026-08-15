@@ -79,6 +79,7 @@ def get_tesseract_available_languages() -> set[str]:
         [binary, "--list-langs"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     if result.returncode != 0:
@@ -119,6 +120,7 @@ def run_tesseract_ocr(image_path: Path, ocr_lang: str, ocr_psm: int) -> str:
         ],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     if result.returncode != 0:

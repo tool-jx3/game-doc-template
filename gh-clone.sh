@@ -1,7 +1,7 @@
 #!/bin/bash
 # 從此 template 建立新 repo（預設 private）
 
-if [ -z "$1" ]; then
+if [ -z "$1" ] || [ "${1#--}" != "$1" ]; then
   echo "Usage: ./gh-clone.sh <repo-name> [--public]"
   exit 1
 fi

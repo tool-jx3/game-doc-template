@@ -7,6 +7,8 @@ disable-model-invocation: true
 
 # Bilingual Translate
 
+> 模型建議：本技能為主執行緒流程，依成本路由決策建議於 **sonnet** 會話執行；高階模型會話亦可執行，但屬超規格花費。
+
 ## Overview
 
 Single-pass bilingual translation. Produces documents where each Chinese paragraph is followed by the English original as a blockquote.
@@ -69,7 +71,7 @@ For each target file, determine the source English markdown path from `data/mark
 
 Determine the output path: `docs/src/content/docs/bilingual/<section>/<file>.md` (from `chapters.json` + `mode=bilingual`).
 
-Run bilingual_prep.py to generate the draft with placeholders in `.claude/skills/bilingual-translate/.state/drafts/`:
+Run bilingual_prep.py to generate the draft with placeholders in `.state/bilingual-translate/drafts/`:
 
 ```bash
 uv run python scripts/bilingual_prep.py <SOURCE_FILE> <DRAFT_FILE>

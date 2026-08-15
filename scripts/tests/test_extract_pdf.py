@@ -5,12 +5,16 @@ from types import SimpleNamespace
 
 import pytest
 
+import json
+
 from extract_pdf import (
     build_image_filename,
     build_output_stem,
     detect_source_type,
+    load_document_extraction_settings,
     normalize_layout_profile,
     normalize_page_text_engine,
+    resolve_page_text_strategy,
     write_full_markdown,
 )
 from _epub_lib import should_print_progress
@@ -184,3 +188,106 @@ class TestWriteFullMarkdown:
         result = write_full_markdown(output, ["First page", "", "Second page"], "ocr")
         assert result == output
         assert output.read_text(encoding="utf-8") == "First page\n\nSecond page\n"
+
+
+# ---------------------------------------------------------------------------
+# load_document_extraction_settings
+# ---------------------------------------------------------------------------
+
+def _write_style_decisions(root: Path, document_format: dict) -> None:
+    (root / "style-decisions.json").write_text(
+        json.dumps({"_meta": {"description": "x", "updated": ""}, "document_format": document_format}),
+        encoding="utf-8",
+    )
+
+
+class TestLoadDocumentExtractionSettings:
+    def test_per_document_overrides_global(self, tmp_path):
+        _write_style_decisions(
+            tmp_path,
+            {
+                "page_text_engine": "pymupdf",
+                "layout_profile": "single-column",
+                "documents": {
+                    "Household_1.2": {
+                        "page_text_engine": "markitdown",
+                        "layout_profile": "double-column",
+                    }
+                },
+            },
+        )
+
+        settings = load_document_extraction_settings(tmp_path, "Household_1.2")
+
+        assert settings == {"page_text_engine": "markitdown", "layout_profile": "double-column"}
+
+    def test_falls_back_to_global_for_other_documents(self, tmp_path):
+        _write_style_decisions(
+            tmp_path,
+            {
+                "page_text_engine": "pymupdf",
+                "documents": {"Household_1.2": {"page_text_engine": "markitdown"}},
+            },
+        )
+
+        settings = load_document_extraction_settings(tmp_path, "Other_Book")
+
+        assert settings == {"page_text_engine": "pymupdf"}
+
+    def test_missing_style_decisions_returns_empty(self, tmp_path):
+        assert load_document_extraction_settings(tmp_path, "Anything") == {}
+
+
+# ---------------------------------------------------------------------------
+# resolve_page_text_strategy
+# ---------------------------------------------------------------------------
+
+class TestResolvePageTextStrategy:
+    def test_epub_uses_markitdown_single_column(self, tmp_path):
+        strategy = resolve_page_text_strategy(
+            tmp_path / "book.epub", tmp_path, requested_engine="auto", requested_layout="auto"
+        )
+        assert strategy["page_text_engine"] == "markitdown"
+        assert strategy["page_text_engine_source"] == "epub-default"
+        assert strategy["layout_profile"] == "single-column"
+        assert strategy["source_type"] == "epub"
+
+    def test_document_settings_override_auto(self, tmp_path):
+        _write_style_decisions(
+            tmp_path,
+            {
+                "documents": {
+                    "book": {"page_text_engine": "markitdown", "layout_profile": "double-column"}
+                }
+            },
+        )
+
+        strategy = resolve_page_text_strategy(
+            tmp_path / "book.pdf", tmp_path, requested_engine="auto", requested_layout="auto"
+        )
+
+        assert strategy["page_text_engine"] == "markitdown"
+        assert strategy["page_text_engine_source"] == "style-decisions"
+        assert strategy["layout_profile"] == "double-column"
+        assert strategy["layout_profile_source"] == "style-decisions"
+        # Explicit settings short-circuit layout detection and the quality probe.
+        assert strategy["detection"] is None
+        assert strategy["quality_probe"] is None
+
+    def test_cli_request_beats_style_decisions(self, tmp_path):
+        _write_style_decisions(
+            tmp_path,
+            {"documents": {"book": {"page_text_engine": "markitdown", "layout_profile": "double-column"}}},
+        )
+
+        strategy = resolve_page_text_strategy(
+            tmp_path / "book.pdf",
+            tmp_path,
+            requested_engine="pymupdf",
+            requested_layout="single-column",
+        )
+
+        assert strategy["page_text_engine"] == "pymupdf"
+        assert strategy["page_text_engine_source"] == "cli"
+        assert strategy["layout_profile"] == "single-column"
+        assert strategy["layout_profile_source"] == "cli"

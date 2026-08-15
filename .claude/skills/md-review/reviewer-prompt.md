@@ -7,7 +7,7 @@ Use this template when dispatching the Markdown reviewer subagent.
 **Note:** All context is inlined by the orchestrator. Do not read any files yourself.
 
 ```text
-Agent tool (general-purpose):
+Agent tool (general-purpose, model: haiku):
   description: "Review markdown structure for <TARGET_FILE>"
   prompt: |
     You are reviewing one translated markdown draft for markdown validity and project style compliance.
@@ -42,7 +42,7 @@ Agent tool (general-purpose):
 
     ## Project Conventions
 
-    Apply the documentation formatting and translation-style conventions from `AGENTS.md`, especially:
+    Apply the documentation formatting and translation-style conventions from `.claude/rules/docs-conventions.md`（文件格式與翻譯風格規範）, especially:
     - frontmatter title and description
     - heading hierarchy
     - internal links and anchors

@@ -58,11 +58,13 @@ def main() -> None:
     meta = data.get("_meta", {})
     chapters = data.get("chapters", [])
 
+    total = meta.get("total_chapters", len(chapters))
     if args.source:
         chapters = [
             c for c in chapters
             if args.source in c.get("source", "")
         ]
+        total = len(chapters)
 
     # Compute counts
     counts = {"not_started": 0, "in_progress": 0, "completed": 0}
@@ -82,7 +84,7 @@ def main() -> None:
 
     report = {
         "progress_file": str(progress_file.relative_to(PROJECT_ROOT) if progress_file.is_relative_to(PROJECT_ROOT) else progress_file),
-        "total": meta.get("total_chapters", len(chapters)),
+        "total": total,
         "completed": counts["completed"],
         "in_progress": counts["in_progress"],
         "not_started": counts["not_started"],

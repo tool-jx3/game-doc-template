@@ -69,7 +69,9 @@
       "properties": {
         "mode": { "type": "string" },
         "overlay": { "type": "string" },
-        "palette": { "type": "string" }
+        "palette": { "type": "string" },
+        "bg_h": { "type": "string" },
+        "bg_l": { "type": "string" }
       },
       "additionalProperties": true
     },

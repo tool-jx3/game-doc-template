@@ -146,8 +146,23 @@ uv run python scripts/style_decisions.py set-translation-mode \
 1. If `preserve_images = true`, ask user to assign extracted images for hero/background/og.
 2. If `preserve_images = true`, copy and resize where needed.
 3. If `preserve_images = false`, skip extracted image assignment and continue with theme-only setup.
-4. Ask theme decisions in Traditional Chinese (mode/overlay/palette).
-5. Update `docs/src/styles/custom.css` and persist style decisions.
+4. Ask theme decisions in Traditional Chinese. `custom.css` derives every interface
+   layer (nav, sidebar, hairlines, inline code, surfaces) from `--bg-h` and `--bg-l`,
+   so ask for those two knobs plus the accent hues — never for individual layer colors.
+   - `--overlay-opacity` MUST stay `0` unless a background image is actually placed at
+     `docs/public/bg.jpg`. On a flat background the overlay has nothing to mask and only
+     darkens the page.
+   - `--bg-l` is meaningful in the 5%-16% range (dark mode only; the layer model is additive).
+5. Update `docs/src/styles/custom.css`, then persist the theme decision via:
+
+```bash
+uv run python scripts/style_decisions.py set-theme \
+  --mode dark-forced \
+  --bg-h "<0-360>" \
+  --bg-l "<5%-16%>" \
+  --overlay "<0_unless_background_image_used>" \
+  --palette "<色票說明>"
+```
 6. Persist image retention decision via:
 
 ```bash
@@ -168,11 +183,11 @@ uv run python scripts/style_decisions.py set-images --preserve-images <true_or_f
      --intro "<USER_INPUT>"
    ```
 
-9. Ask for copyright and credits in Traditional Chinese:
+8. Ask for copyright and credits in Traditional Chinese:
    - Copyright notice text（例：`© 2024 Author Name. All rights reserved.`）
    - Credits entries as role → name pairs（例：原作者、翻譯、美術設計等）
    - Whether to show each section on the homepage
-10. Persist via:
+9. Persist via:
 
 ```bash
 uv run python scripts/style_decisions.py set-copyright \
@@ -184,7 +199,7 @@ uv run python scripts/style_decisions.py set-credits \
   --show-on-homepage <true_or_false>
 ```
 
-11. Ask whether there are any translation-wide notes the translator must always follow.
+10. Ask whether there are any translation-wide notes the translator must always follow.
     Persist each note via:
 
 ```bash
@@ -203,7 +218,7 @@ uv run python scripts/style_decisions.py add-translation-note \
   --note "<USER_INPUT>"
 ```
 
-12. Run:
+11. Run:
 
 ```bash
 uv run python scripts/validate_style_decisions.py

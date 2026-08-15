@@ -323,11 +323,9 @@ def count_terms_batch(
     corpus: dict[str, str], terms: list[str]
 ) -> dict[str, tuple[int, dict[str, int]]]:
     """Count many terms in a single pass per file using a first-token index."""
-    from collections import defaultdict as _dd
-
     # Pre-compute normalised token sequences for each term.
     term_norms_map: dict[str, list[str]] = {}
-    first_idx: dict[str, list[tuple[str, list[str]]]] = _dd(list)
+    first_idx: dict[str, list[tuple[str, list[str]]]] = defaultdict(list)
     for term in terms:
         norms = _term_norms(term)
         if norms:

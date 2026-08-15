@@ -1,0 +1,12 @@
+description = "出版前三關品質總檢（映射到 final-proofread skill）"
+prompt = """
+Use the `final-proofread` skill from workspace skills at `.gemini/skills/final-proofread/SKILL.md`.
+Follow that skill exactly end-to-end.
+
+User arguments: {{args}}
+
+Requirements:
+- Interact with user in Traditional Chinese.
+- Run terminology checks before finalizing according to project rules.
+- Report concrete file changes and executed commands.
+"""

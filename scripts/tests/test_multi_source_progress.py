@@ -93,6 +93,22 @@ class TestIterChapterFilesRecursive:
         section_slug, rel_path, file_cfg, source = result[0]
         assert source == "core_pages.md"
 
+    def test_malformed_entry_raises_instead_of_silently_dropping(self):
+        config = {
+            "output_dir": "docs/src/content/docs",
+            "chapters": {
+                "core": {
+                    "title": "Core",
+                    "order": 1,
+                    "files": {
+                        "index": {"title": "Index", "order": 0},
+                    },
+                },
+            },
+        }
+        with pytest.raises(ValueError, match="index"):
+            list(iter_chapter_files(config))
+
     def test_bilingual_mode(self):
         config = {
             "output_dir": "docs/src/content/docs",
@@ -173,3 +189,4 @@ class TestProgressReadSourceFilter:
         data = json.loads(result.stdout)
         assert len(data["chapters"]) == 1
         assert data["chapters"][0]["source"] == "core_pages.md"
+        assert data["total"] == 1

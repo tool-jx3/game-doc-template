@@ -47,6 +47,7 @@ def check_availability() -> dict[str, object]:
             ["java", "-version"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=10,
         )
         version_output = proc.stderr or proc.stdout
@@ -103,6 +104,17 @@ def convert_pdf_to_markdown(pdf_path: Path, output_dir: Path) -> str | None:
         return md_files[0].read_text(encoding="utf-8")
 
 
+def split_pages_content(content: str, total_pages: int) -> list[tuple[int, str]] | None:
+    """依分隔符（\\n---\\n 或換頁符）切分內容；無法可靠切分時回傳 None。"""
+    page_separator_pattern = re.compile(r"\n---\n|\f")
+    raw_pages = [p for p in page_separator_pattern.split(content) if p.strip()]
+    if len(raw_pages) == total_pages or (
+        len(raw_pages) > 1 and abs(len(raw_pages) - total_pages) <= 2
+    ):
+        return [(i + 1, text.strip()) for i, text in enumerate(raw_pages)]
+    return None
+
+
 def convert_pdf_pages(
     pdf_path: Path,
     progress_every: int = 25,
@@ -140,21 +152,10 @@ def convert_pdf_pages(
     # opendataloader 輸出可能包含頁面分隔標記（如 --- 或換頁符）
     # 使用 pymupdf 取得頁數，然後嘗試按分隔符切分
     # 如果無法可靠切分，就將整份內容作為單頁處理，再用 pymupdf 頁碼對應
-    page_separator_pattern = re.compile(r'\n---\n|\f')
-    raw_pages = page_separator_pattern.split(content)
-
-    # 過濾空頁
-    raw_pages = [p for p in raw_pages if p.strip()]
-
-    if len(raw_pages) == total_pages:
-        for i, text in enumerate(raw_pages):
-            pages.append((i + 1, text.strip()))
-    elif len(raw_pages) > 1 and abs(len(raw_pages) - total_pages) <= 2:
-        # 接近頁數，允許小誤差
-        for i, text in enumerate(raw_pages):
-            pages.append((i + 1, text.strip()))
+    split_result = split_pages_content(content, total_pages)
+    if split_result is not None:
+        pages = split_result
     else:
-        # 無法可靠切分 → 使用逐頁模式
         pages = _convert_pages_individually(pdf_path, total_pages, progress_every)
 
     return pages

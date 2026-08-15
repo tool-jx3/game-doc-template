@@ -33,7 +33,12 @@ def validate_merge(configs: list[dict]) -> None:
             orders.append(order)
 
 
-def merge_configs(configs, *, mode_override=None, output_dir_override=None):
+def merge_configs(
+    configs: list[dict],
+    *,
+    mode_override: str | None = None,
+    output_dir_override: str | None = None,
+) -> dict:
     first = configs[0]
     result = {
         "output_dir": output_dir_override or first.get("output_dir", "docs/src/content/docs"),
@@ -44,7 +49,12 @@ def merge_configs(configs, *, mode_override=None, output_dir_override=None):
         result["images"] = first["images"]
     for cfg in configs:
         slug = cfg["slug"]
-        chapter = {"source": cfg["source"], "title": cfg["title"], "order": cfg["order"]}
+        try:
+            chapter = {"source": cfg["source"], "title": cfg["title"]}
+        except KeyError as exc:
+            raise ValueError(f"Config '{slug}' is missing required field {exc}") from exc
+        if "order" in cfg:
+            chapter["order"] = cfg["order"]
         original_chapters = cfg.get("chapters", {})
         chapter["files"] = {}
         for ch_key, ch_val in original_chapters.items():
@@ -58,8 +68,8 @@ def merge_configs(configs, *, mode_override=None, output_dir_override=None):
     return result
 
 
-def expand_paths(patterns):
-    paths = []
+def expand_paths(patterns: list[str]) -> list[Path]:
+    paths: list[Path] = []
     for pattern in patterns:
         expanded = glob.glob(pattern)
         if expanded:
@@ -74,7 +84,7 @@ def expand_paths(patterns):
     return sorted(paths)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Merge multiple chapters_<name>.json into chapters.json")
     parser.add_argument("inputs", nargs="+", help="Input JSON files or glob patterns")
     parser.add_argument("-o", "--output", default="chapters.json", help="Output path")

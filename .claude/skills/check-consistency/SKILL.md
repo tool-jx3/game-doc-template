@@ -2,7 +2,6 @@
 name: check-consistency
 description: Use when auditing terminology consistency across translated documentation.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Check Terminology Consistency

@@ -1,43 +1,14 @@
 ---
-title: Year Zero Engine SRD
-description: Year Zero Engine 核心規則標準參考文件
+title: 遊戲規則文件
+description: 使用 game-doc-template 建立的規則書文件站。執行 /init-doc 開始設定。
 template: splash
 hero:
-  tagline: 快速查閱 YZE 核心規則機制
-  image:
-    file: ../../assets/hero.jpg
-  actions:
-    - text: Introduction
-      link: /bilingual/introduction/
-      icon: right-arrow
-    - text: Player Characters
-      link: /bilingual/player-characters/
-      icon: document
-      variant: minimal
-sidebar:
-  order: 0
+  title: 遊戲規則文件
+  tagline: 尚未初始化——請在專案中執行 /init-doc 匯入規則書。
 ---
 
-import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+## 開始使用
 
-## 內容簡介
-
-Year Zero Engine 是多款 Free League 桌遊的核心規則系統，本站提供雙語版規則文件供查閱。
-
-## 快速導航
-
-<CardGrid>
-  <LinkCard title="Introduction" href="/bilingual/introduction/" description="Overview of the Year Zero Engine: key concepts, dice types, tools of the game, and core design pillars." />
-  <LinkCard title="Player Characters" href="/bilingual/player-characters/" description="Player character creation, attributes, archetypes, skills, health, resolve, gear, encumbrance, and experience advancement." />
-  <LinkCard title="Skills & Specialties" href="/bilingual/skills/" description="How skills work in the Year Zero Engine: rolling dice, successes, pushing rolls, modifiers, and gear." />
-  <LinkCard title="Combat & Damage" href="/bilingual/combat/maps-and-zones/" description="Combat zones, range categories, rounds, initiative, and surprise rules." />
-  <LinkCard title="Magic" href="/bilingual/magic/casting/" description="How magic works in the Year Zero Engine: learning magic, spells, spell ranks, casting, mishaps, rituals, and general spells." />
-  <LinkCard title="Travel" href="/bilingual/travel/travel-rules/" description="Travel maps, terrain types, tasks, weather, marching, forced march, and navigation rules." />
-</CardGrid>
-
----
-
-## 版權宣告
-
-© 2023 Fria Ligan AB. Year Zero Engine Free Tabletop License.
-
+1. 將規則書 PDF 放入 `data/pdfs/`
+2. 執行 `/init-doc` 完成抽取、章節切分與術語初始化
+3. 執行 `/translate` 或 `/super-translate` 開始翻譯

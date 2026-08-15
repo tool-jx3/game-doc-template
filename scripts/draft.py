@@ -31,19 +31,19 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).resolve().parents[1]
 VALID_SKILLS = ("translate", "super-translate")
 _FM_RE = re.compile(r"^---\n(.*?)\n---\n?(.*)", re.DOTALL)
 _H2_SPLIT_RE = re.compile(r"(?=^## )", re.MULTILINE)
 
 
 def _draft_path(source: Path, skill: str) -> Path:
-    draft_root = ROOT / ".claude" / "skills" / skill / ".state" / "drafts"
+    draft_root = ROOT / ".state" / skill / "drafts"
     return draft_root / source
 
 
 def _manifest_path(skill: str) -> Path:
-    state_root = ROOT / ".claude" / "skills" / skill / ".state"
+    state_root = ROOT / ".state" / skill
     return state_root / "draft-manifest.json"
 
 
@@ -234,7 +234,7 @@ def _merge_chunks_writeback(source_str: str, entry: dict, skill: str, manifest: 
 
 
 def cmd_clean(skill: str) -> None:
-    draft_dir = ROOT / ".claude" / "skills" / skill / ".state" / "drafts"
+    draft_dir = ROOT / ".state" / skill / "drafts"
     manifest_path = _manifest_path(skill)
     if draft_dir.exists():
         shutil.rmtree(draft_dir)

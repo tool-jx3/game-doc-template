@@ -1,49 +1,14 @@
-# Starlight Starter Kit: Basics
+# docs — 文件網站
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+本目錄是由 [game-doc-template](../README.md) 管理的 Astro 5 + Starlight 文件站，內容（`src/content/docs/`）與側欄（`astro.config.mjs` 的 `sidebar`）由專案根目錄的轉換管線產生：`/init-doc` 抽取規則書 → `/chapter-split` 切分章節（`scripts/split_chapters.py` 依 `chapters.json`）→ `scripts/generate_nav.py` 重寫首頁與側欄。
 
-```
-bun create astro@latest -- --template starlight
-```
+## 指令
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+| 指令 | 說明 |
+| --- | --- |
+| `bun install` | 安裝相依 |
+| `bun run dev` | 本地開發（localhost:4321） |
+| `bun run build` | 建置到 `./dist/` |
+| `bun run preview` | 預覽建置結果 |
 
-## 🚀 Project Structure
-
-Inside of your Astro + Starlight project, you'll see the following folders and files:
-
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   └── docs/
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
-```
-
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
-
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
-
-Static assets, like favicons, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `bun install`             | Installs dependencies                            |
-| `bun dev`             | Starts local dev server at `localhost:4321`      |
-| `bun build`           | Build your production site to `./dist/`          |
-| `bun preview`         | Preview your build locally, before deploying     |
-| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `bun astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+手動編輯 `src/content/docs/` 的內容會在下次執行管線時被覆寫；請透過翻譯工作流程（`/translate`、`/super-translate`）修改。

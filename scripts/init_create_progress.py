@@ -9,6 +9,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from _markdown_utils import iter_leaves
+from split_chapters import normalize_files
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CHAPTERS = PROJECT_ROOT / "chapters.json"
 DEFAULT_OUTPUT = PROJECT_ROOT / "data" / "translation-progress.json"
@@ -55,8 +58,9 @@ def iter_chapter_files(
         if section_slug.startswith("_"):
             continue
         source = section.get("source", config.get("source", ""))
+        files = normalize_files(section.get("files", {}))
         _walk_files(
-            section.get("files", {}),
+            files,
             path_prefix=f"{base}/{section_slug}",
             section_slug=section_slug,
             source=source,
@@ -73,17 +77,14 @@ def _walk_files(
     source: str,
     results: list[tuple[str, str, dict[str, Any], str]],
 ) -> None:
-    """Recursively walk files dict, collecting leaf nodes."""
-    for key, entry in sorted(
-        files.items(), key=lambda x: x[1].get("order", 9999)
-    ):
-        current_path = f"{path_prefix}/{key}"
-        if "pages" in entry:
-            results.append((section_slug, f"{current_path}.md", entry, source))
-        elif "files" in entry:
-            _walk_files(
-                entry["files"], current_path, section_slug, source, results
-            )
+    """Walk a normalized files dict, collecting leaf nodes.
+
+    Raises:
+        ValueError: an entry has neither ``pages`` nor ``files`` (propagated
+        from ``iter_leaves``), instead of silently dropping it.
+    """
+    for key_path, entry in iter_leaves(files):
+        results.append((section_slug, f"{path_prefix}/{key_path}.md", entry, source))
 
 
 def chapter_id_from_path(rel_path: str) -> str:

@@ -18,10 +18,16 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Set up Python
-        run: uv python install 3.12
+        run: uv python install
 
       - name: Sync dependencies
         run: uv sync
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: Validate style decisions
+        run: uv run python scripts/validate_style_decisions.py
 
       - name: Validate glossary schema
         run: uv run python scripts/validate_glossary.py

@@ -2,7 +2,6 @@
 name: md-review
 description: Use when a markdown draft or docs page must be checked for structural validity and documentation style compliance before writeback or publishing.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Markdown Review
@@ -12,6 +11,8 @@ disable-model-invocation: true
 Single-file Markdown structure and style gate for translated docs and drafts.
 
 **Core principle:** Block writeback when structure, syntax, or documentation conventions are broken.
+
+**模型建議：** 經 Agent tool 派遣時使用 **model: haiku**（清單式結構核對，無需高階推理能力）。
 
 ## Scope
 
@@ -29,7 +30,7 @@ If source content is available, compare the draft against the source. Otherwise,
 1. Read the target markdown content.
 2. If available, also read:
    - source content for the same page or draft
-   - `AGENTS.md` Integrated Conventions
+   - `.claude/rules/docs-conventions.md`（文件格式與翻譯風格規範）
    - `style-decisions.json`
    - `glossary.json` when proper-noun or term policy affects the judgment
 3. Treat `style-decisions.json.translation_notes` as hard constraints.
@@ -44,7 +45,7 @@ Check and report:
    - balanced `---` delimiters
    - YAML is parseable
    - `title` and `description` exist and are non-empty
-   - `sidebar.order` exists when the page is meant to appear in sidebar navigation
+   - 側欄順序由 `_meta.yml` 驅動；頁面**不需要** `sidebar.order`，僅在刻意覆蓋自動排序時才應出現
 2. Heading rules:
    - no body H1 when `frontmatter.title` already provides the title
    - no heading of any level that simply restates `frontmatter.title`
@@ -70,7 +71,8 @@ Check and report:
 
 Check and report:
 
-1. Chinese prose uses Traditional Chinese punctuation.
+1. Chinese prose uses Traditional Chinese punctuation:
+   - 刪節號必須使用 `……`，不得使用 `...`
 2. Simplified Chinese must not appear.
 3. Every applicable rule in `style-decisions.json.translation_notes` is followed.
 4. No invented overview heading or title-repeat heading appears.

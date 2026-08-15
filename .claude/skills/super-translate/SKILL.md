@@ -15,6 +15,15 @@ Iterative translation pipeline: `translator → reviewer → md-reviewer → ref
 
 **Markdown rule:** Source block shape is binding. Translators and refiners must preserve block order and block type, not just the wording.
 
+## 模型路由（固定，勿依會話模型浮動）
+
+| 角色 | model 參數 | 理由 |
+| --- | --- | --- |
+| translator | opus | 初稿品質決定迭代輪數 |
+| reviewer | opus | 品質裁判需要最強模型 |
+| md-reviewer | haiku | 清單式結構核對，無需判斷力 |
+| refiner | sonnet | 執行 reviewer 的具體修改清單 |
+
 ## Task Initialization (MANDATORY)
 
 Before ANY action, create tasks using TaskCreate:
@@ -82,17 +91,17 @@ Read `style-decisions.json.translation_mode.mode`. If missing, ask user:
    ```bash
    uv run python scripts/draft.py --skill super-translate path <TARGET_FILE>
    ```
-3. **Dispatch translator** (Agent tool, general-purpose) using `./translator-prompt.md`
+3. **Dispatch translator** (Agent tool, general-purpose, **model: opus**) using `./translator-prompt.md`
    - Inline all context: source, glossary, style, draft path
    - Translator must not read files; all context is pre-inlined
    - Translator must complete a block-shape self-check before returning: frontmatter, heading levels, list structure, blank-line boundaries, tables, code fences, admonitions, images, and MDX/import blocks must still align with the source
 4. Read draft content after translator returns
-5. **Dispatch reviewer** (Agent tool, general-purpose) using `./reviewer-prompt.md`
+5. **Dispatch reviewer** (Agent tool, general-purpose, **model: opus**) using `./reviewer-prompt.md`
    - Inline: source, draft, glossary, style
-6. **Dispatch Markdown reviewer** by invoking the `md-review` skill using `../md-review/reviewer-prompt.md`
-   - Inline: source, draft, glossary, style, project conventions from `AGENTS.md`
+6. **Dispatch Markdown reviewer** by invoking the `md-review` skill (Agent tool, general-purpose, **model: haiku**) using `../md-review/reviewer-prompt.md`
+   - Inline: source, draft, glossary, style, project conventions from `.claude/rules/docs-conventions.md`
    - This gate checks Markdown structure, frontmatter, heading hierarchy, block boundaries, lists, tables, links, image syntax, Starlight syntax, and zh-TW style rules
-7. If either reviewer fails → **dispatch refiner** using `./refiner-prompt.md`
+7. If either reviewer fails → **dispatch refiner** (Agent tool, general-purpose, **model: sonnet**) using `./refiner-prompt.md`
    - Inline: source, draft, translation review JSON, md review JSON, glossary, style
    - Refiner must repair structure before wording polish when Markdown findings exist
    - Re-read draft → re-run reviewer → re-run Markdown reviewer. Cap at 2 total iterations.

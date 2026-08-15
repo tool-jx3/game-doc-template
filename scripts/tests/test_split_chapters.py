@@ -10,8 +10,10 @@ from split_chapters import (
     get_page_range,
     infer_source_stem,
     build_page_text_stats,
+    group_images_by_page,
     normalize_files,
     resolve_config,
+    split_chapters,
     write_meta_yml,
 )
 from pathlib import Path
@@ -244,6 +246,22 @@ class TestNormalizeFiles:
     def test_empty_files(self):
         assert normalize_files({}) == {}
 
+    def test_flat_leaf_then_nested_same_prefix_raises(self):
+        files = {
+            "combat": {"title": "Combat", "pages": [1, 2], "order": 0},
+            "combat/actions": {"title": "Actions", "pages": [5, 7], "order": 1},
+        }
+        with pytest.raises(ValueError, match="combat"):
+            normalize_files(files)
+
+    def test_nested_then_flat_leaf_same_prefix_raises(self):
+        files = {
+            "combat/actions": {"title": "Actions", "pages": [5, 7], "order": 0},
+            "combat": {"title": "Combat", "pages": [1, 2], "order": 1},
+        }
+        with pytest.raises(ValueError, match="combat"):
+            normalize_files(files)
+
 
 # ---------------------------------------------------------------------------
 # resolve_config
@@ -344,3 +362,137 @@ class TestLoadManifestCached:
         )
 
         assert second_policy["repeat_file_size_threshold"] == 99
+
+
+# ---------------------------------------------------------------------------
+# group_images_by_page
+# ---------------------------------------------------------------------------
+
+_BG_POLICY = {
+    "background_min_coverage_ratio": 0.6,
+    "background_min_text_tokens": 80,
+    "background_dominant_color_ratio_threshold": 0.85,
+}
+_BG_STATS = {1: {"text_tokens": 100, "char_count": 500}, 2: {"text_tokens": 100, "char_count": 500}}
+
+
+def _bg_image(page: int, filename: str, **overrides) -> dict:
+    """A background-candidate image (high coverage, page has plenty of text)."""
+    base = {
+        "page": page,
+        "filename": filename,
+        "coverage_ratio": 0.8,
+        "page_width": 612,
+        "page_height": 792,
+        "width": 600,
+        "height": 780,
+        "x": 0,
+        "y": 0,
+    }
+    base.update(overrides)
+    return base
+
+
+class TestGroupImagesByPage:
+    def test_skips_repeated_file_sizes(self):
+        images = [
+            _bg_image(1, "a.png", file_size=1000),
+            _bg_image(2, "b.png", file_size=1000),
+        ]
+        policy = {**_BG_POLICY, "repeat_file_size_threshold": 2}
+
+        page_images, skipped = group_images_by_page(images, _BG_STATS, policy)
+
+        assert page_images == {}
+        assert skipped == 2
+
+    def test_keeps_repeated_file_sizes_when_not_background(self):
+        # Low text pages disqualify the background heuristic, so nothing is skipped.
+        images = [
+            _bg_image(1, "a.png", file_size=1000),
+            _bg_image(2, "b.png", file_size=1000),
+        ]
+        policy = {**_BG_POLICY, "repeat_file_size_threshold": 2}
+        stats = {1: {"text_tokens": 5, "char_count": 20}, 2: {"text_tokens": 5, "char_count": 20}}
+
+        page_images, skipped = group_images_by_page(images, stats, policy)
+
+        assert skipped == 0
+        assert sorted(page_images) == [1, 2]
+
+    def test_skips_repeated_visual_hashes(self):
+        images = [
+            _bg_image(1, "a.png", visual_hash="deadbeef"),
+            _bg_image(2, "b.png", visual_hash="deadbeef"),
+        ]
+        policy = {**_BG_POLICY, "repeat_visual_threshold": 2}
+
+        _, skipped = group_images_by_page(images, _BG_STATS, policy)
+
+        assert skipped == 2
+
+    def test_skips_flat_dominant_color_backgrounds(self):
+        images = [_bg_image(1, "a.png", dominant_color_ratio=0.95)]
+
+        page_images, skipped = group_images_by_page(images, _BG_STATS, _BG_POLICY)
+
+        assert page_images == {}
+        assert skipped == 1
+
+    def test_orders_page_images_by_position_then_filename(self):
+        images = [
+            _bg_image(1, "c.png", y=100, x=10, coverage_ratio=0.1),
+            _bg_image(1, "a.png", y=10, x=50, coverage_ratio=0.1),
+            _bg_image(1, "b.png", y=10, x=5, coverage_ratio=0.1),
+        ]
+
+        page_images, skipped = group_images_by_page(images, _BG_STATS, _BG_POLICY)
+
+        assert skipped == 0
+        assert [img["filename"] for img in page_images[1]] == ["b.png", "a.png", "c.png"]
+
+
+# ---------------------------------------------------------------------------
+# split_chapters (output directory routing)
+# ---------------------------------------------------------------------------
+
+def _minimal_config(mode: str | None) -> dict:
+    config = {
+        "source": "source.md",
+        "output_dir": "docs/src/content/docs",
+        "chapters": {
+            "rules": {
+                "title": "規則",
+                "order": 1,
+                "files": {
+                    "index": {"title": "規則總覽", "description": "test", "pages": [1, 1]},
+                },
+            }
+        },
+    }
+    if mode is not None:
+        config["mode"] = mode
+    return config
+
+
+class TestSplitChaptersOutputDir:
+    def test_bilingual_mode_writes_to_bilingual_subdir(self, tmp_path):
+        (tmp_path / "source.md").write_text(
+            "<!-- page 1 -->\n# Test\n\nHello world.\n", encoding="utf-8"
+        )
+
+        split_chapters(_minimal_config("bilingual"), tmp_path)
+
+        page = tmp_path / "docs" / "src" / "content" / "docs" / "bilingual" / "rules" / "index.md"
+        assert page.exists()
+
+    def test_default_mode_writes_to_output_dir(self, tmp_path):
+        (tmp_path / "source.md").write_text(
+            "<!-- page 1 -->\n# Test\n\nHello world.\n", encoding="utf-8"
+        )
+
+        split_chapters(_minimal_config(None), tmp_path)
+
+        page = tmp_path / "docs" / "src" / "content" / "docs" / "rules" / "index.md"
+        assert page.exists()
+        assert not (tmp_path / "docs" / "src" / "content" / "docs" / "bilingual").exists()

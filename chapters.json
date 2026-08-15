@@ -1,208 +1,22 @@
 {
-  "source": "data/markdown/YZE-Standard-Reference-Document_pages.md",
+  "source": "data/markdown/YOUR-RULEBOOK_pages.md",
   "output_dir": "docs/src/content/docs",
+  "mode": "zh_only",
   "chapters": {
-    "introduction": {
-      "title": "Introduction",
+    "example-section": {
+      "title": "Example Section",
       "order": 1,
       "files": {
         "index": {
-          "title": "Introduction",
-          "description": "Overview of the Year Zero Engine: key concepts, dice types, tools of the game, and core design pillars.",
+          "title": "Example Chapter",
+          "description": "格式參考用佔位章節；執行 /init-doc 或 /chapter-split 後會被真實內容取代。",
           "pages": [
-            2,
-            3
+            1,
+            2
           ],
           "order": 0
-        }
-      }
-    },
-    "player-characters": {
-      "title": "Player Characters",
-      "order": 2,
-      "files": {
-        "index": {
-          "title": "Player Characters",
-          "description": "Player character creation, attributes, archetypes, skills, health, resolve, gear, encumbrance, and experience advancement.",
-          "pages": [
-            4,
-            7
-          ],
-          "order": 0
-        }
-      }
-    },
-    "skills": {
-      "title": "Skills & Specialties",
-      "order": 3,
-      "files": {
-        "index": {
-          "title": "Skills & Specialties",
-          "description": "How skills work in the Year Zero Engine: rolling dice, successes, pushing rolls, modifiers, and gear.",
-          "pages": [
-            8,
-            9
-          ],
-          "order": 0
-        },
-        "skill-rolls": {
-          "title": "Skill Rolls & Modifiers",
-          "description": "Detailed rules for skill rolls: pushing, panic, passive rolls, modifiers, difficulty, advantage, and opposed rolls.",
-          "pages": [
-            10,
-            12
-          ],
-          "order": 1
-        },
-        "skill-list": {
-          "title": "The Skills & Specialties",
-          "description": "Complete list of the twelve core skills and all specialties available to player characters, including magic specialties.",
-          "pages": [
-            12,
-            14
-          ],
-          "order": 2
-        }
-      }
-    },
-    "combat": {
-      "title": "Combat & Damage",
-      "order": 4,
-      "files": {
-        "maps-and-zones": {
-          "title": "Maps, Zones & Initiative",
-          "description": "Combat zones, range categories, rounds, initiative, and surprise rules.",
-          "pages": [
-            15,
-            16
-          ],
-          "order": 0
-        },
-        "actions": {
-          "title": "Actions & Movement",
-          "description": "Slow and fast actions, movement, retreat, ambushes, and sneak attacks.",
-          "pages": [
-            16,
-            17
-          ],
-          "order": 1
-        },
-        "close-combat": {
-          "title": "Close Combat",
-          "description": "Close combat mechanics: attacks, blocking, special attacks, and modifiers.",
-          "pages": [
-            17,
-            18
-          ],
-          "order": 2
-        },
-        "ranged-combat": {
-          "title": "Ranged Combat",
-          "description": "Ranged combat mechanics: aimed fire, modifiers, ammunition, full-auto fire, and overwatch.",
-          "pages": [
-            18,
-            20
-          ],
-          "order": 3
-        },
-        "damage": {
-          "title": "Damage, Conditions & Recovery",
-          "description": "Weapons, damage, stress, body armor, cover, conditions, broken state, and recovery rules.",
-          "pages": [
-            20,
-            22
-          ],
-          "order": 4
-        },
-        "critical-injuries": {
-          "title": "Critical Injuries & Hazards",
-          "description": "Critical injury tables, death, healing crits, trauma, and other hazards: darkness, fire, explosions, falling, poison, disease, cold, and more.",
-          "pages": [
-            22,
-            25
-          ],
-          "order": 5
-        },
-        "vehicles-and-chases": {
-          "title": "Vehicles & Chases",
-          "description": "Vehicle stats, vehicle damage, repairs, critical vehicle damage, chase rules, and chase obstacles.",
-          "pages": [
-            26,
-            29
-          ],
-          "order": 6
-        }
-      }
-    },
-    "magic": {
-      "title": "Magic",
-      "order": 5,
-      "files": {
-        "casting": {
-          "title": "Magic Rules",
-          "description": "How magic works in the Year Zero Engine: learning magic, spells, spell ranks, casting, mishaps, rituals, and general spells.",
-          "pages": [
-            30,
-            31
-          ],
-          "order": 0
-        },
-        "druid-spells": {
-          "title": "Druid Spells",
-          "description": "Druidic magic disciplines: Awareness, Healing, and Shapeshifting spell lists.",
-          "pages": [
-            32,
-            35
-          ],
-          "order": 1
-        },
-        "sorcery-spells": {
-          "title": "Sorcery Spells",
-          "description": "Sorcery disciplines: Blood Magic, Death Magic, Elementalism, and Symbolism spell lists.",
-          "pages": [
-            35,
-            40
-          ],
-          "order": 2
-        }
-      }
-    },
-    "travel": {
-      "title": "Travel",
-      "order": 6,
-      "files": {
-        "travel-rules": {
-          "title": "Travel Rules",
-          "description": "Travel maps, terrain types, tasks, weather, marching, forced march, and navigation rules.",
-          "pages": [
-            41,
-            42
-          ],
-          "order": 0
-        },
-        "driving-and-mounts": {
-          "title": "Driving & Mounts",
-          "description": "Driving rules, driving at night, mishaps, fuel, mounts, and driving mishap tables.",
-          "pages": [
-            42,
-            43
-          ],
-          "order": 1
-        },
-        "camp-and-survival": {
-          "title": "Camp & Survival",
-          "description": "Keeping watch, foraging, hunting, making camp, camp mishaps, cooking, sleeping, exploring, resting, and water travel.",
-          "pages": [
-            43,
-            45
-          ],
-          "order": 2
         }
       }
     }
-  },
-  "mode": "bilingual",
-  "images": {
-    "enabled": false
   }
 }

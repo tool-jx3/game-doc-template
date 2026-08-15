@@ -7,42 +7,21 @@ Skips if no test files exist to avoid unnecessary delays.
 """
 
 import json
-import os
 import sys
 import subprocess
 from pathlib import Path
 
 
 def has_test_files() -> bool:
-    """Check if project has any test files (excluding virtual environments)."""
-    project_root = Path.cwd()
-
-    # Common test patterns
-    test_patterns = [
-        "test_*.py",
-        "*_test.py",
-        "tests/*.py",
-        "scripts/tests/*.py"
-    ]
-
-    for pattern in test_patterns:
-        # Get all matching files
-        all_files = list(project_root.glob(pattern)) + list(project_root.glob(f"**/{pattern}"))
-
-        # Filter out virtual environment files
-        project_files = [f for f in all_files if not any(
-            part in ['.venv', 'venv', 'env', 'node_modules', '.git']
-            for part in f.parts
-        )]
-
-        if project_files:
-            return True
-
-    return False
+    """Check if scripts/tests contains any test files."""
+    tests_dir = Path.cwd() / "scripts" / "tests"
+    if not tests_dir.is_dir():
+        return False
+    return any(tests_dir.glob("test_*.py"))
 
 
 def is_python_file_change(data: dict) -> bool:
-    """Check if the tool change affects Python files."""
+    """Check if the tool change affects Python files in scripts/."""
     tool_name = data.get('tool_name', '')
     tool_input = data.get('tool_input', {})
 
@@ -54,7 +33,10 @@ def is_python_file_change(data: dict) -> bool:
     if not file_path:
         return False
 
-    return file_path.endswith('.py')
+    if not file_path.endswith('.py'):
+        return False
+    normalized = file_path.replace('\\', '/')
+    return '/scripts/' in normalized or normalized.startswith('scripts/')
 
 
 def run_pytest() -> tuple[bool, str]:
@@ -68,7 +50,7 @@ def run_pytest() -> tuple[bool, str]:
             ['uv', 'run', 'pytest', '-v', '--tb=short', '-x'],
             capture_output=True,
             text=True,
-            timeout=15,  # 15 second timeout
+            timeout=90,  # 90 second timeout (cold uv-sync run measured ~39s on 365 tests)
             cwd=Path.cwd()
         )
 
@@ -93,7 +75,7 @@ def run_pytest() -> tuple[bool, str]:
             return False, '\n'.join(limited_output)
 
     except subprocess.TimeoutExpired:
-        return False, "Pytest timeout (15s) - tests may be hanging or too slow"
+        return False, "Pytest timeout (90s) - tests may be hanging or too slow"
     except FileNotFoundError:
         return False, "uv not found - cannot run pytest"
     except Exception as e:

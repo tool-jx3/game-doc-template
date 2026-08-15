@@ -9,10 +9,12 @@
       - 180 = 青, 217 = 藍, 270 = 紫, 330 = 粉
 
    2. 深淺調整 - 修改 L 值（亮度 0%-100%）
-      - 背景建議 5%-10%（深色模式）
+      - 背景建議 5%-16%（深色模式）
+      - 導覽列、分隔線、程式碼底都由 --bg-l 相對推導，改一個值即可
       - 主色建議 50%-65%
 
    3. 遮罩強度 - 修改 --overlay-opacity (0-1)
+      - 僅在啟用背景圖片時需要，純色背景請維持 0
       - 0.6 = 淡遮罩, 0.8 = 強遮罩
 
    4. 圖片替換
@@ -100,10 +102,24 @@
      背景與遮罩
      ============================================ */
 
-  --overlay-opacity: 0.7;
+  /* 遮罩只在使用背景圖片時才需要（見下方「背景設定」）。
+     預設為純色背景，故設為 0；放入 /public/bg.jpg 後再調回 0.7。 */
+  --overlay-opacity: 0;
   --bg-overlay: hsla(var(--bg-h), var(--bg-s), 5%, var(--overlay-opacity));
-  --bg-overlay-strong: hsla(var(--bg-h), var(--bg-s), 5%, 0.9);
-  --bg-overlay-light: hsla(var(--bg-h), var(--bg-s), 5%, 0.6);
+
+  /* ============================================
+     介面層級（全部相對 --bg-l，改背景亮度時層次會一起跟著走）
+
+     注意：此處用「加法」讓層級比底色亮，僅適用深色模式。
+     若日後要支援淺色模式，需改為減法（層級比底色暗）。
+     ============================================ */
+
+  /* 導覽列、側欄 */
+  --bg-chrome: hsl(var(--bg-h), var(--bg-s), calc(var(--bg-l) + 3%));
+  /* 搜尋面板底、細分隔線 */
+  --bg-panel: hsl(var(--bg-h), var(--bg-s), calc(var(--bg-l) + 6%));
+  /* 行內程式碼、hover 態、較明顯的邊框 */
+  --bg-raised: hsl(var(--bg-h), var(--bg-s), calc(var(--bg-l) + 14%));
 
   /* ============================================
      Card 變數
@@ -116,15 +132,22 @@
 
   /* ============================================
      灰階色系（通常不需修改）
+     ============================================
+
+     1-4 是文字色：色相跟著 --bg-h，飽和度壓低避免內文被染色。
+     5-6 是表面色：Starlight 內部拿來畫表格框線、引言左框線、摺疊區塊
+        邊框、Pagination、行動選單與程式碼區塊邊框，共約 48 處。
+        改為沿用上方的層級變數，--bg-l 調整時才不會沒入背景。
+
      ============================================ */
 
   --sl-color-white: hsl(0, 0%, 100%);
-  --sl-color-gray-1: hsl(224, 20%, 94%);
-  --sl-color-gray-2: hsl(224, 10%, 77%);
-  --sl-color-gray-3: hsl(224, 8%, 56%);
-  --sl-color-gray-4: hsl(224, 10%, 36%);
-  --sl-color-gray-5: hsl(224, 14%, 20%);
-  --sl-color-gray-6: hsl(224, 20%, 12%);
+  --sl-color-gray-1: hsl(var(--bg-h), 12%, 94%);
+  --sl-color-gray-2: hsl(var(--bg-h), 8%, 77%);
+  --sl-color-gray-3: hsl(var(--bg-h), 6%, 56%);
+  --sl-color-gray-4: hsl(var(--bg-h), 8%, 36%);
+  --sl-color-gray-5: var(--bg-raised);
+  --sl-color-gray-6: var(--bg-panel);
   --sl-color-black: hsl(var(--bg-h), var(--bg-s), var(--bg-l));
 
   /* Starlight 系統色 */
@@ -136,19 +159,21 @@
   --sl-color-text: var(--sl-color-gray-1);
   --sl-color-text-accent: var(--sl-color-accent-high);
   --sl-color-bg: var(--sl-color-black);
-  --sl-color-bg-nav: hsl(var(--bg-h), var(--bg-s), 8%);
-  --sl-color-bg-sidebar: hsl(var(--bg-h), var(--bg-s), 8%);
-  --sl-color-bg-inline-code: var(--sl-color-gray-5);
-  --sl-color-hairline-light: var(--sl-color-gray-5);
-  --sl-color-hairline: var(--sl-color-gray-6);
+  --sl-color-bg-nav: var(--bg-chrome);
+  --sl-color-bg-sidebar: var(--bg-chrome);
+  /* 分隔線與行內程式碼底改為相對 --bg-l。
+     原本綁死 gray-5/gray-6（20%／12%），--bg-l 一旦調高就會比背景暗而看不見。 */
+  --sl-color-bg-inline-code: var(--bg-raised);
+  --sl-color-hairline-light: var(--bg-raised);
+  --sl-color-hairline: var(--bg-panel);
 
   /* Pagefind 搜尋 UI（深色模式） */
   --pagefind-ui-scale: 0.8;
   --pagefind-ui-primary: var(--color-primary);
   --pagefind-ui-text: var(--sl-color-gray-1);
-  --pagefind-ui-background: var(--sl-color-gray-6);
-  --pagefind-ui-border: var(--sl-color-gray-5);
-  --pagefind-ui-tag: var(--sl-color-gray-5);
+  --pagefind-ui-background: var(--bg-panel);
+  --pagefind-ui-border: var(--bg-raised);
+  --pagefind-ui-tag: var(--bg-raised);
   --pagefind-ui-border-width: 1px;
   --pagefind-ui-border-radius: 8px;
   --pagefind-ui-font: inherit;
@@ -191,7 +216,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: hsla(var(--bg-h), var(--bg-s), 5%, var(--overlay-opacity));
+  background: var(--bg-overlay);
   pointer-events: none;
   z-index: -1;
 }
@@ -206,13 +231,8 @@ body::before {
   background: transparent;
 }
 
-.sidebar {
-  background: var(--bg-overlay-strong) !important;
-}
-
-header.header {
-  background: var(--bg-overlay-strong) !important;
-}
+/* 導覽列與側欄的底色統一在下方「導航列」「側邊欄」兩節設定，
+   不在此處重複宣告（同為 !important 時只有後者生效）。 */
 
 /* ============================================
    字體設定
@@ -236,7 +256,7 @@ h1, h2, h3, h4, h5, h6 {
     radial-gradient(ellipse 80% 50% at 50% -20%, var(--color-primary-glow), transparent),
     radial-gradient(ellipse 60% 40% at 80% 50%, var(--color-tertiary-glow), transparent),
     radial-gradient(ellipse 60% 40% at 20% 50%, var(--color-secondary-glow), transparent),
-    linear-gradient(180deg, hsl(var(--bg-h), 30%, 8%) 0%, hsl(var(--bg-h), var(--bg-s), var(--bg-l)) 100%);
+    linear-gradient(180deg, hsl(var(--bg-h), 30%, calc(var(--bg-l) + 2%)) 0%, hsl(var(--bg-h), var(--bg-s), var(--bg-l)) 100%);
 }
 
 /* 頂部裝飾光條 */
@@ -398,8 +418,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* LinkCard hover 樣式 */
 .sl-link-card:hover {
-  background: hsla(var(--bg-h), var(--bg-s), 8%, 0.95) !important;
-  border-color: hsla(var(--bg-h), var(--bg-s), 25%, 0.6) !important;
+  background: hsla(var(--bg-h), var(--bg-s), calc(var(--bg-l) + 2%), 0.95) !important;
+  border-color: hsla(var(--bg-h), var(--bg-s), calc(var(--bg-l) + 19%), 0.6) !important;
 }
 
 .sl-link-card:hover .icon {
@@ -473,7 +493,7 @@ h1, h2, h3, h4, h5, h6 {
    ============================================ */
 
 header.header {
-  background: var(--bg-overlay) !important;
+  background: var(--bg-chrome) !important;
   backdrop-filter: blur(12px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
@@ -488,7 +508,7 @@ header.header {
    ============================================ */
 
 nav.sidebar {
-  background: var(--bg-overlay-light) !important;
+  background: var(--bg-chrome) !important;
 }
 
 nav.sidebar a {
@@ -541,9 +561,9 @@ pre {
 [data-pagefind-ui] {
   --pagefind-ui-primary: var(--pagefind-ui-primary, var(--color-primary)) !important;
   --pagefind-ui-text: var(--pagefind-ui-text, var(--sl-color-gray-1)) !important;
-  --pagefind-ui-background: var(--pagefind-ui-background, var(--sl-color-gray-6)) !important;
-  --pagefind-ui-border: var(--pagefind-ui-border, var(--sl-color-gray-5)) !important;
-  --pagefind-ui-tag: var(--pagefind-ui-tag, var(--sl-color-gray-5)) !important;
+  --pagefind-ui-background: var(--pagefind-ui-background, var(--bg-panel)) !important;
+  --pagefind-ui-border: var(--pagefind-ui-border, var(--bg-raised)) !important;
+  --pagefind-ui-tag: var(--pagefind-ui-tag, var(--bg-raised)) !important;
 }
 
 .pagefind-ui__search-input,
@@ -582,8 +602,8 @@ pre {
 
 .pagefind-ui__result:hover,
 .pagefind-ui__result-inner:hover {
-  background: var(--sl-color-gray-5) !important;
-  background-color: var(--sl-color-gray-5) !important;
+  background: var(--bg-raised) !important;
+  background-color: var(--bg-raised) !important;
 }
 
 .pagefind-ui__message {
@@ -671,7 +691,7 @@ mobile-starlight-toc span {
 
 mobile-starlight-toc a:hover {
   color: var(--sl-color-white) !important;
-  background: var(--sl-color-gray-5) !important;
+  background: var(--bg-raised) !important;
 }
 
 mobile-starlight-toc .toggle,
@@ -712,7 +732,7 @@ span.toggle.sl-flex,
 }
 
 .sidebar-content a:hover {
-  background: var(--sl-color-gray-5) !important;
+  background: var(--bg-raised) !important;
 }
 
 /* ============================================

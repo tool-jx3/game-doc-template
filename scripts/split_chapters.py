@@ -46,14 +46,12 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from _image_analysis import (
-    image_coverage_ratio,
     image_dominant_color_ratio,
     image_file_size_key,
-    image_page_dimensions,
     image_visual_key,
     is_background_candidate,
 )
-from _markdown_utils import clean_content, count_page_text_tokens
+from _markdown_utils import clean_content, count_page_text_tokens, yaml_safe
 
 
 def load_config(config_path: Path) -> dict:
@@ -147,14 +145,6 @@ def get_page_range(pages: dict[int, str], start: int, end: int) -> str:
 
 
 
-def _yaml_safe(value: str) -> str:
-    """如果值含有 YAML 特殊字元（: # 等），加雙引號保護。"""
-    if any(ch in value for ch in (":", "#", "{", "}", "[", "]", ",", "&", "*", "?", "|", "-", "<", ">", "=", "!", "%", "@", "`")):
-        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-        return f'"{escaped}"'
-    return value
-
-
 def _strip_duplicate_heading(content: str, title: str) -> str:
     """移除內文開頭與 frontmatter title 重複的 H1/H2 標題。"""
     lines = content.split("\n")
@@ -178,10 +168,10 @@ def generate_frontmatter(title: str, description: str = "", order: int | None = 
     """生成 Starlight frontmatter"""
     lines = [
         "---",
-        f"title: {_yaml_safe(title)}",
+        f"title: {yaml_safe(title)}",
     ]
     if description:
-        lines.append(f"description: {_yaml_safe(description)}")
+        lines.append(f"description: {yaml_safe(description)}")
     if order is not None:
         lines.append("sidebar:")
         lines.append(f"  order: {order}")
@@ -206,6 +196,11 @@ def normalize_files(files: dict) -> dict:
 
     Entries without slashes are kept as-is.  Group nodes created by
     normalisation get ``title`` set to the raw slug and no ``order``.
+
+    Raises:
+        ValueError: a key is used both as a flat leaf and as a slash-nested
+            group prefix (e.g. ``"combat"`` and ``"combat/actions"``), since
+            a single key cannot be both a leaf and a group.
     """
     result: dict = {}
     for key, entry in files.items():
@@ -213,10 +208,20 @@ def normalize_files(files: dict) -> dict:
             parts = key.split("/")
             parent = parts[0]
             child = "/".join(parts[1:])
+            if parent in result and "files" not in result[parent]:
+                raise ValueError(
+                    f"Key collision in chapter files: '{parent}' is used as a "
+                    f"flat leaf entry and as a group prefix (from '{key}')"
+                )
             if parent not in result:
                 result[parent] = {"title": parent, "files": {}}
             result[parent]["files"][child] = entry
         else:
+            if key in result and "files" in result[key]:
+                raise ValueError(
+                    f"Key collision in chapter files: '{key}' is used as a "
+                    f"flat leaf entry and as a group prefix (from a nested key)"
+                )
             result[key] = entry
     # Recurse for multi-level slash paths
     for key, entry in result.items():
@@ -253,7 +258,7 @@ def write_meta_yml(directory: Path, entry: dict) -> None:
     ``starlight-auto-sidebar`` plugin.
     """
     title = entry.get("title", directory.name)
-    lines: list[str] = [f"label: {_yaml_safe(title)}"]
+    lines: list[str] = [f"label: {yaml_safe(title)}"]
     order = entry.get("order")
     if order is not None:
         lines.append(f"order: {order}")
@@ -596,7 +601,7 @@ def split_chapters(config: dict, project_root: Path):
 
 
 def main():
-    project_root = Path(__file__).parent.parent
+    project_root = Path(__file__).resolve().parents[1]
     default_config = project_root / "chapters.json"
 
     # 處理命令列參數

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -37,8 +38,13 @@ def check_required_files(root: Path) -> list[str]:
     return missing
 
 
+def check_bun_available() -> bool:
+    """檢查 bun 是否在 PATH 上（docs build 需要）。"""
+    return shutil.which("bun") is not None
+
+
 def run_cmd(cmd: list[str], cwd: Path) -> dict[str, Any]:
-    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8")
     return {
         "cmd": cmd,
         "cwd": str(cwd),
@@ -77,7 +83,9 @@ def main() -> None:
         [py, "scripts/validate_style_decisions.py"],
         [py, "scripts/term_read.py", "--fail-on-missing", "--fail-on-forbidden"],
     ]
-    if not args.skip_docs_build:
+
+    bun_missing = not args.skip_docs_build and not check_bun_available()
+    if not bun_missing and not args.skip_docs_build:
         checks.append(["bun", "run", "build"])
 
     for cmd in checks:
@@ -87,6 +95,18 @@ def main() -> None:
         if result["returncode"] != 0:
             report["ok"] = False
             break
+
+    if bun_missing and report["ok"]:
+        report["ok"] = False
+        report["checks"].append(
+            {
+                "cmd": ["bun", "run", "build"],
+                "returncode": -1,
+                "stdout": "",
+                "stderr": "bun 未安裝或不在 PATH — 請安裝 bun 或改用 --skip-docs-build",
+                "cwd": str(root / "docs"),
+            }
+        )
 
     if args.json:
         print(json.dumps(report, ensure_ascii=False, indent=2))

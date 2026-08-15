@@ -8,11 +8,22 @@ import re
 import sys
 from pathlib import Path
 
+from _markdown_utils import yaml_safe
+from split_chapters import normalize_files
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CHAPTERS_FILE = PROJECT_ROOT / "chapters.json"
 STYLE_FILE = PROJECT_ROOT / "style-decisions.json"
 INDEX_FILE = PROJECT_ROOT / "docs" / "src" / "content" / "docs" / "index.mdx"
 ASTRO_CONFIG = PROJECT_ROOT / "docs" / "astro.config.mjs"
+# Starlight binds `hero.image.file` to Astro's image() helper: emitting the key
+# when the asset is missing breaks `bun run build` with [ImageNotFound].
+HERO_IMAGE = PROJECT_ROOT / "docs" / "src" / "assets" / "hero.jpg"
+HERO_IMAGE_REF = "../../assets/hero.jpg"
+
+
+class SidebarPatchError(RuntimeError):
+    """Raised when the sidebar array cannot be located in astro.config.mjs."""
 
 
 def load_json(path: Path) -> dict:
@@ -84,50 +95,6 @@ def first_file_description(section: dict) -> str:
     return ""
 
 
-def first_leaf_path(files: dict, path_prefix: str) -> str:
-    """Recursively find the path to the first leaf node (by order)."""
-    for key, entry in sorted(files.items(), key=lambda x: x[1].get("order", 9999)):
-        if "pages" in entry:
-            return f"{path_prefix}/{key}"
-        elif "files" in entry:
-            result = first_leaf_path(entry["files"], f"{path_prefix}/{key}")
-            if result != f"{path_prefix}/{key}":
-                return result
-    return path_prefix
-
-
-def yaml_safe(value: str) -> str:
-    """Wrap YAML-sensitive scalars in double quotes."""
-    if any(
-        ch in value
-        for ch in (
-            ":",
-            "：",
-            "#",
-            "{",
-            "}",
-            "[",
-            "]",
-            ",",
-            "&",
-            "*",
-            "?",
-            "|",
-            "-",
-            "<",
-            ">",
-            "=",
-            "!",
-            "%",
-            "@",
-            "`",
-        )
-    ):
-        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-        return f'"{escaped}"'
-    return value
-
-
 # --- Index page generation ---
 
 def generate_index(chapters: dict, style: dict, mode: str = "zh_only") -> str:
@@ -158,8 +125,13 @@ def generate_index(chapters: dict, style: dict, mode: str = "zh_only") -> str:
         "template: splash",
         "hero:",
         f"  tagline: {yaml_safe(tagline)}",
-        "  image:",
-        "    file: ../../assets/hero.jpg",
+    ]
+    if HERO_IMAGE.exists():
+        lines += [
+            "  image:",
+            f"    file: {HERO_IMAGE_REF}",
+        ]
+    lines += [
         "  actions:",
         f"    - text: {yaml_safe(first_title)}",
         f"      link: {first_href}",
@@ -272,16 +244,32 @@ def generate_sidebar_entries(chapters: dict, mode: str = "zh_only") -> str:
     return ",\n".join(entries)
 
 
+# Matches both the collapsed blank-template form (`sidebar: [],`) and the
+# populated multi-line form. The optional block is non-greedy and requires the
+# closing bracket to sit on its own line, so the match stops at the sidebar
+# array's own `],` instead of over-consuming `plugins` / `customCss` / the
+# enclosing `starlight({...})` brackets.
+SIDEBAR_PATTERN = re.compile(
+    r"^(?P<indent>[ \t]*)sidebar:[ \t]*\[\s*(?:\n.*?\n[ \t]*)?\],",
+    re.MULTILINE | re.DOTALL,
+)
+
+
 def update_astro_sidebar(config_text: str, chapters: dict, mode: str = "zh_only") -> str:
-    """Replace sidebar array content in astro.config.mjs."""
+    """Replace sidebar array content in astro.config.mjs.
+
+    Raises:
+        SidebarPatchError: when the sidebar array cannot be located.
+    """
     entries = generate_sidebar_entries(chapters, mode=mode)
-    # Match the sidebar array: sidebar: [ ... ],
-    pattern = r"(sidebar:\s*\[)\s*\n.*?\n(\s*\],)"
-    replacement = f"\\1\n{entries}\n\\2"
-    result, count = re.subn(pattern, replacement, config_text, flags=re.DOTALL)
+
+    def _replace(match: re.Match[str]) -> str:
+        indent = match.group("indent")
+        return f"{indent}sidebar: [\n{entries}\n{indent}],"
+
+    result, count = SIDEBAR_PATTERN.subn(_replace, config_text, count=1)
     if count == 0:
-        print("⚠ 無法定位 astro.config.mjs 中的 sidebar 陣列", file=sys.stderr)
-        return config_text
+        raise SidebarPatchError("無法定位 astro.config.mjs 中的 sidebar 陣列")
     return result
 
 
@@ -301,6 +289,12 @@ def main() -> None:
         print("❌ chapters.json 中沒有章節資料", file=sys.stderr)
         raise SystemExit(1)
 
+    # chapters.json 允許扁平斜線路徑鍵（如 "combat/actions"），實際輸出的文件樹
+    # 由 split_chapters.py 透過 normalize_files() 展開後才落地；此處必須套用相同
+    # 正規化，導覽/首頁連結與側邊欄才會對齊 split_chapters.py 實際寫出的結構。
+    for section in chapters.values():
+        section["files"] = normalize_files(section.get("files", {}))
+
     style = load_json(STYLE_FILE) if STYLE_FILE.exists() else {}
 
     # Generate index.mdx
@@ -312,7 +306,11 @@ def main() -> None:
     # Update astro.config.mjs sidebar
     if ASTRO_CONFIG.exists():
         original = ASTRO_CONFIG.read_text(encoding="utf-8")
-        updated = update_astro_sidebar(original, chapters, mode=mode)
+        try:
+            updated = update_astro_sidebar(original, chapters, mode=mode)
+        except SidebarPatchError as exc:
+            print(f"❌ {exc}：{ASTRO_CONFIG}", file=sys.stderr)
+            raise SystemExit(1) from exc
         if updated != original:
             ASTRO_CONFIG.write_text(updated, encoding="utf-8")
             print(f"✓ 已更新側邊欄: {ASTRO_CONFIG}")
