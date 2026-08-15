@@ -99,16 +99,17 @@ Read `style-decisions.json.translation_mode.mode`. If missing, ask user:
      - Translator must not read files; all context is pre-inlined
    - Either way, the translator step must complete a block-shape self-check before the pipeline continues: frontmatter, heading levels, list structure, blank-line boundaries, tables, code fences, admonitions, images, and MDX/import blocks must still align with the source
 4. Read draft content after the translator step returns
-5. **Dispatch reviewer** (Agent tool, general-purpose, **model: opus**) using `./reviewer-prompt.md`
-   - Inline: source, draft, glossary, style
-6. **Dispatch Markdown reviewer** by invoking the `md-review` skill (Agent tool, general-purpose, **model: haiku**) using `../md-review/reviewer-prompt.md`
-   - Inline: source, draft, glossary, style, project conventions from `.claude/rules/docs-conventions.md`
-   - This gate checks Markdown structure, frontmatter, heading hierarchy, block boundaries, lists, tables, links, image syntax, Starlight syntax, and zh-TW style rules
-7. If either reviewer fails → **dispatch refiner** (Agent tool, general-purpose, **model: sonnet**) using `./refiner-prompt.md`
+5. **Dispatch reviewer and Markdown reviewer concurrently** — the two gates check independent things (translation fidelity vs. Markdown structure) and neither needs the other's output, so issue both dispatches in the same message and wait for both:
+   - **Reviewer** (Agent tool, general-purpose, **model: opus**) using `./reviewer-prompt.md`
+     - Inline: source, draft, glossary, style
+   - **Markdown reviewer** by invoking the `md-review` skill (Agent tool, general-purpose, **model: haiku**) using `../md-review/reviewer-prompt.md`
+     - Inline: source, draft, glossary, style, project conventions from `.claude/rules/docs-conventions.md`
+     - This gate checks Markdown structure, frontmatter, heading hierarchy, block boundaries, lists, tables, links, image syntax, Starlight syntax, and zh-TW style rules
+6. If either reviewer fails → **dispatch refiner** (Agent tool, general-purpose, **model: sonnet**) using `./refiner-prompt.md`
    - Inline: source, draft, translation review JSON, md review JSON, glossary, style
    - Refiner must repair structure before wording polish when Markdown findings exist
-   - Re-read draft → re-run reviewer → re-run Markdown reviewer. Cap at 2 total iterations.
-8. If 2 iterations still fail, ask user:
+   - Re-read draft → re-dispatch reviewer and Markdown reviewer concurrently (same as step 5). Cap at 2 total iterations.
+7. If 2 iterations still fail, ask user:
    - **保留草稿，稍後手動修正**
    - **停止此檔案，先處理術語、格式或規則歧義**
 
@@ -147,16 +148,22 @@ After each batch:
 
 **Verification:** `git log -1` shows checkpoint commit with `progress: X/Y` message; report displayed to user.
 
-### Step 7: Final Verification
+### Step 7: Final Verification (MANDATORY, cannot be skipped)
 
 ```bash
 uv run python scripts/validate_glossary.py
 uv run python scripts/term_read.py --fail-on-missing --fail-on-forbidden
 ```
 
-Invoke `check-consistency` skill. Resolve violations before marking run complete.
+**Always invoke the `check-consistency` skill next, unconditionally** — this is the step that catches terms approved *after* an earlier file in this same run (or a prior run) was already translated; per-file review alone cannot catch that drift. Do not skip this because the batch "looked clean" or the run is taking a while.
 
-**Verification:** Both validation commands exit 0; `check-consistency` reports no violations; all tasks marked `completed`.
+If `check-consistency` reports zero violations → mark the run complete.
+
+If `check-consistency` reports any violations → **stop. Do not silently fix and continue, and do not mark the run complete.** Report the violations to the user and ask:
+- **現在修正**：套用術語替換，重新驗證
+- **記錄下來，稍後統一處理**：先結束本次執行，違規清單留給下次術語決策時處理
+
+**Verification:** Both validation commands exit 0; `check-consistency` was actually invoked (not assumed clean) and either reports zero violations or the user has explicitly chosen how to proceed; all tasks marked `completed`.
 
 ## Prompt Templates
 
@@ -176,7 +183,7 @@ digraph super_translate {
     mode [label="Resolve\ntranslation mode", shape=box];
     translate [label="Dispatch translator\n(Codex or opus)", shape=box];
     review [label="Dispatch\nreviewer", shape=box];
-    mdreview [label="Dispatch\nmd reviewer", shape=box];
+    mdreview [label="Dispatch\nmd reviewer\n(parallel)", shape=box];
     pass [label="Both pass?", shape=diamond];
     refine [label="Dispatch\nrefiner", shape=box];
     cap [label="Iteration\ncap?", shape=diamond];
@@ -188,13 +195,15 @@ digraph super_translate {
 
     start -> preflight -> mode -> translate;
     translate -> review;
-    review -> mdreview;
+    translate -> mdreview;
+    review -> pass;
     mdreview -> pass;
     pass -> writeback [label="yes"];
     pass -> cap [label="no"];
     cap -> refine [label="< 2"];
     cap -> ask [label="= 2"];
     refine -> review;
+    refine -> mdreview;
     writeback -> checkpoint;
     checkpoint -> more;
     more -> start [label="yes"];
