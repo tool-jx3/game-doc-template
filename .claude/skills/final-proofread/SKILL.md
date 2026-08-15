@@ -2,7 +2,6 @@
 name: final-proofread
 description: Use when performing final quality checks before publishing the documentation site. Use when all translation is complete and you need to verify titles/descriptions are translated, check for misplaced or erroneous content, run page-reference link checks, and verify the search index.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Final Proofread

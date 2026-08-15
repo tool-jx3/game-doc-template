@@ -32,9 +32,16 @@ Agent tool (general-purpose):
     <STYLE_CONTENT>
     ```
 
+    ## Translator Voice & Style
+
+    ```markdown
+    <TRANSLATOR_STYLE_CONTENT>
+    ```
+
     ## Hard Constraints
 
     - Traditional Chinese only (Taiwan usage), no Simplified Chinese.
+    - Follow the Translator Voice & Style rules above for register, proper-noun policy, POV, terminology glossing, and sentence structure.
     - Preserve markdown structure exactly. Translate text only; do not normalize, improve, or redesign formatting.
     - Preserve every source block in the same order. A block includes frontmatter, heading, paragraph, list, table, fenced code block, admonition, blockquote, image block, HTML/MDX block, and import line.
     - Preserve frontmatter keys and YAML shape. Translate values when appropriate, but do not add or remove keys.

@@ -2,7 +2,6 @@
 name: check-completeness
 description: Use when validating translated documentation for missing rule content.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Check Completeness

@@ -2,7 +2,6 @@
 name: bilingual-translate
 description: Use when translating in bilingual mode — produces Chinese primary + English blockquote markdown. Single-pass, no multi-round review. Requires translation_mode=bilingual in style-decisions.json.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Bilingual Translate
@@ -86,7 +85,7 @@ For each target file:
 
 1. If using task tracking, mark the item `in_progress`
 2. Read draft, `glossary.json`, and `style-decisions.json`
-3. For each `<!-- TODO: 翻譯 -->` placeholder: replace it with the Chinese translation of the English text in the immediately following blockquote line(s).
+3. For each `<!-- TODO: 翻譯 -->` placeholder: replace it with the Chinese translation of the English text in the immediately following blockquote line(s), following `../translate/translator-style.md` for register, proper-noun policy, POV, terminology glossing, and sentence structure.
 
    If Codex tiering is enabled and available (`../translate/codex-tier.md` §2), delegate this placeholder-filling to Codex per `../translate/codex-tier.md` §3 — the prompt MUST state that only `<!-- TODO: 翻譯 -->` placeholders may be replaced and every line starting with `>` must be left byte-for-byte untouched. On any Codex failure, fall back to doing it yourself per `../translate/codex-tier.md` §5.
 4. Update frontmatter `title` to Traditional Chinese; add `bilingual: true` if not present

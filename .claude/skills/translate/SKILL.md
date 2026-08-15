@@ -2,7 +2,6 @@
 name: translate
 description: Use when translating one file, one section, or all docs with glossary and style constraints.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Translate Document
@@ -109,6 +108,7 @@ For each target file:
 
    Otherwise (or on fallback), translate to `$DRAFT_FILE` yourself:
    - Traditional Chinese only (Taiwan usage), no Simplified Chinese
+   - Follow `./translator-style.md` for register, proper-noun policy, POV, terminology glossing, and sentence structure
    - Preserve markdown structure exactly (frontmatter, headings, lists, tables, links, code blocks)
    - Follow every applicable note in `style-decisions.json.translation_notes`
    - Treat `frontmatter.title` as the page title; do not restate it anywhere in the body as a heading of any level (`#`, `##`, etc.)
@@ -128,6 +128,7 @@ For each target file:
    - Content contamination: any paragraph or block that has no corresponding source in the original file?
    - Untranslated English: any English left untranslated (excluding code/dice notation such as `1d6`, `+2`)? Covers body text, headings, table cells, and game labels (status conditions, item tags, rule keywords/phrases). Terminology must match `glossary.json`; proper nouns follow `style-decisions.json` policy.
    - Native Chinese quality: any sentence that keeps English clause order/structure instead of natural Chinese syntax? Any 四字成語 or literary flourish that isn't grounded in the source's meaning? Any technical term translated where `glossary.json` or `style-decisions.json` says to keep the original English form?
+   - `./translator-style.md` compliance: register correct outside play examples, POV preserved, first-occurrence glossing present, long sentences split
    - Fix any issues found in the draft directly
 6. Writeback:
    ```bash

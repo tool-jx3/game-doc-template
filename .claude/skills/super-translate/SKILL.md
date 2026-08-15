@@ -2,7 +2,6 @@
 name: super-translate
 description: Use when high-quality translation is needed with multi-agent review and quality gates before overwriting source files.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Super Translate
@@ -81,6 +80,7 @@ Read `style-decisions.json.translation_mode.mode`. If missing, ask user:
 **Pre-read shared context once per batch:**
 - `GLOSSARY_CONTENT` = `glossary.json`
 - `STYLE_CONTENT` = `style-decisions.json` (includes `translation_notes` as hard constraints)
+- `TRANSLATOR_STYLE_CONTENT` = `../translate/translator-style.md`
 
 **For each target file, run the pipeline:**
 

@@ -2,7 +2,6 @@
 name: new-project
 description: Use when creating a new translation project from template and preparing repository metadata.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Create New Project from Template
@@ -132,7 +131,17 @@ uv run python scripts/style_decisions.py set-repository \
 uv run python scripts/validate_style_decisions.py
 ```
 
-**Verification:** PDF exists in `data/pdfs/`; config files updated.
+If `REPO_VISIBILITY` is `public`, also persist the recommended deployment target so `generate_nav.py` and `fix-ref` generate correctly base-prefixed internal links (see README.md's "GitHub Pages（Public 專案推薦）" section for the full recipe — workflow file, `gh api ... pages` enablement, etc.):
+
+```bash
+uv run python scripts/style_decisions.py set-deployment \
+  --target github-pages \
+  --base-path "/<project_name>"
+```
+
+If `REPO_VISIBILITY` is `private`, do not set `deployment` — leave it unset so `generate_nav.py` defaults to root-relative links (Vercel/custom-domain deploys).
+
+**Verification:** PDF exists in `data/pdfs/`; config files updated; for public repos, `style-decisions.json.deployment.base_path` is set and matches `<project_name>`.
 
 ### Step 6: Verify and Report
 
@@ -159,6 +168,8 @@ Report in Traditional Chinese:
 1. cd <TARGET_DIR>
 2. 執行 /init-doc
 ```
+
+If `REPO_VISIBILITY` is `public`, append a deployment note to the report pointing at README.md's "GitHub Pages（Public 專案推薦）" section — public projects should default to GitHub Pages over Vercel (no extra service, deploys straight from the repo).
 
 **Verification:** All prior verifications pass; report displayed to user.
 

@@ -2,7 +2,6 @@
 name: init-doc
 description: Use when initializing a translation project from extraction through glossary, chapter mapping, and progress tracking.
 user-invocable: true
-disable-model-invocation: true
 ---
 
 # Initialize Document Translation

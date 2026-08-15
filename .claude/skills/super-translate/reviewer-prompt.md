@@ -42,6 +42,12 @@ Agent tool (general-purpose):
     <STYLE_CONTENT>
     ```
 
+    ## Translator Voice & Style
+
+    ```markdown
+    <TRANSLATOR_STYLE_CONTENT>
+    ```
+
     ## Core Rule
 
     Verify the draft directly against the source above. Do not read any files.
@@ -57,6 +63,7 @@ Agent tool (general-purpose):
 
     Quality:
     6. Native Chinese quality: flag any sentence that keeps English clause order/structure instead of natural Chinese syntax; flag any 四字成語 or literary flourish not grounded in the source's meaning; flag any technical term translated where `<GLOSSARY_CONTENT>` or `<STYLE_CONTENT>` says to keep the original English form
+    6a. Translator Voice & Style compliance (`<TRANSLATOR_STYLE_CONTENT>`): register correct outside play-example blocks (no 支語, no sloppy internet-casual, no 文言 in prose or in proper-noun/terminology translations); second-person POV preserved; mechanic terms glossed with English in parentheses on first occurrence only; long sentences split rather than mirroring source clause structure
     7. Full-width punctuation correctness
     8. Heading/frontmatter/table/dice format integrity
     9. No added heading of any level that restates `frontmatter.title`, and no invented overview heading when the source has no such heading
