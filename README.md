@@ -109,38 +109,19 @@ Windows 使用者需啟用 `git config core.symlinks true` 並以系統管理員
 
 ### 使用原則
 
-- 建議流程：`new-project` → `init-doc` → `translate`（或高品質版 `super-translate`）；若來源更新或要重切章，插入 `chapter-split`
-- `translate`：單輪線性翻譯，適合快速草稿；`super-translate` (beta)：多 agent 審查循環（最多 2 輪），適合正式發布
-- `translate` 與 `super-translate` 都會在每個 batch 完成後自動建立一個簡短進度 commit（格式：`progress: X/Y`）
+- 建議流程：`new-project` → `init-doc` → `translate`（或高品質版 `super-translate`）；若來源更新或要重切章，插入 `chapter-split`。完整步驟見下方[本專案工作流程](#本專案工作流程簡版)。
+- `translate`：單輪線性翻譯，適合快速草稿；`super-translate` (beta)：多 agent 審查循環（Translator → Reviewer → MD Reviewer → Refiner，最多 2 輪），適合正式發布
+- `translate`、`super-translate`、`bilingual-translate` 都會在每個 batch 完成後自動建立一個簡短進度 commit（格式：`progress: X/Y`）
 - 翻譯前先確認術語（`glossary.json`），交付前執行一致性與完整性檢查
 
-### 快速開始
+### 翻譯草稿模型分層（Codex，選用）
 
-1. 建立新專案
+`translate`、`super-translate`、`bilingual-translate` 可將草稿生成這一步（最耗 token 的步驟）交給本機 Codex CLI 執行（低階模型、低 effort），Claude 只負責審查與把關，藉此把 Claude token 留給真正需要判斷力的步驟。
 
-```bash
-new-project ~/Downloads/your-game.pdf
-```
-
-2. 初始化資料與術語
-
-```bash
-init-doc
-```
-
-3. 開始翻譯
-
-```bash
-translate
-```
-
-4. 高品質翻譯（推薦正式發布使用）
-
-```bash
-super-translate [target]
-```
-
-多 agent 審查循環（Translator → Reviewer → Refiner），最多迭代 2 輪，自動修正術語不一致、殘留英文、簡體字等問題；每個 batch 完成後會自動提一個簡短進度 commit。(beta)
+- 每個專案第一次執行任一翻譯 skill 時會詢問一次是否啟用，答案存在 `style-decisions.json`，之後不再詢問；不想用 Codex 的人選「否」即可，不影響其他功能。
+- 啟用後才會偵測 Codex 是否可用；沒裝且本機有 npm 時才會問要不要安裝，拒絕的話也只問一次。
+- Codex 產生的草稿一律要通過既有的自我審查／reviewer 關卡才能寫回，跟 Claude 自己寫的草稿待遇完全相同；Codex 失敗會靜默退回 Claude 自己寫，不會中斷整批次。
+- 完整運作方式見 `.claude/skills/translate/codex-tier.md`。
 
 ### 常用指令對照
 
@@ -155,6 +136,7 @@ super-translate [target]
 | 單輪雙語翻譯（中文正文＋英文引用） | `bilingual-translate [target]` |
 | 術語一致性檢查                   | `check-consistency`          |
 | 術語決策與批次替換               | `term-decision`              |
+| 術語表建立／驗證／強制執行       | `terminology-management`     |
 | 內容完整性檢查                   | `check-completeness`         |
 | 修正頁碼參照為內部連結           | `fix-ref`                    |
 | 出版前最終校對                   | `final-proofread`            |
@@ -189,7 +171,7 @@ super-translate [target]
 5. 執行翻譯（套用術語表）
    翻譯時以 `glossary.json` 優先，並保留 Markdown 結構。原理：翻譯不是逐句自由發揮，而是「內容翻譯 + 術語套版」。
    - `translate`：單輪翻譯，適合快速草稿或已有良好術語表的情況；每個 batch 完成後會自動建立 `progress: X/Y` 進度 commit。
-   - `super-translate` (beta)：多 agent 翻譯審查循環，Translator → Reviewer → Refiner 最多迭代 2 輪，自動修正術語不一致、殘留英文、簡體字等問題，適合正式發布前的高品質輸出；每個 batch 完成後會自動建立 `progress: X/Y` 進度 commit。
+   - `super-translate` (beta)：多 agent 翻譯審查循環，Translator → Reviewer → MD Reviewer → Refiner 最多迭代 2 輪，自動修正術語不一致、殘留英文、簡體字、Markdown 結構問題，適合正式發布前的高品質輸出；每個 batch 完成後會自動建立 `progress: X/Y` 進度 commit。
 
 6. 修正頁碼參照  
    翻譯完成後執行 `fix-ref`，把「見 12 頁」之類的列印頁碼參照轉換成內部 Markdown 連結。
@@ -214,69 +196,9 @@ super-translate [target]
 
 ## PDF 內容提取（手動流程）
 
-若不使用 AI 輔助，可手動執行：
+不使用 AI 輔助時，可直接執行 `scripts/extract_pdf.py`、`split_chapters.py` 等腳本手動完成提取與切章。完整指令、參數與 OCR 語言設定見 [`scripts/README.md`](scripts/README.md)。
 
-```bash
-# 請在專案根目錄執行
-
-# 1. 提取 PDF
-uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf
-
-# 掃描 PDF 走 OCR
-uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr
-
-# 日文掃描 PDF
-uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr --ocr-lang jpn+eng
-
-# 英文掃描 PDF
-uv run python scripts/extract_pdf.py data/pdfs/your-rulebook.pdf --page-text-engine ocr --ocr-lang eng
-
-# 圖片資料夾走 OCR
-uv run python scripts/extract_pdf.py data/scans/your-rulebook-pages
-
-# 2. 產生章節設定範例
-uv run python scripts/split_chapters.py --init
-
-# 3. 編輯 chapters.json 設定章節結構
-#    可用巢狀檔名，例如 combat/damage；避免把長章節拆成 1、2、3
-
-# 4. 拆分章節
-uv run python scripts/split_chapters.py
-```
-
-`uv sync` 會在專案根目錄建立 `.venv` 與 `uv.lock`，之後所有 Python 腳本請從根目錄以 `uv run python scripts/...` 執行。
-
-OCR 補充：
-- 先用 `tesseract --list-langs` 確認有安裝需要的語言包。
-- 繁體中文建議使用 `chi_tra+eng`。
-- 日文建議使用 `jpn+eng`。
-- 英文建議使用 `eng`。
-- 若同頁真的混排繁中、日文、英文，可用 `chi_tra+jpn+eng`，但一般仍建議使用最小必要語言集合。
-
-### 清除範例資料
-
-`new-project` 建立新專案時會自動執行本腳本一次，確保新專案不含模板殘留，一般不需要手動執行。若要在既有專案重新清理，可執行：
-
-```bash
-uv run python scripts/clean_sample_data.py --yes
-```
-
-會執行以下清理：
-
-- 清空 `data/markdown/*`（保留 `.gitkeep`）
-- 清空 `docs/src/content/docs/**/*.md`、`*.mdx`，並移除清空後留下的空目錄
-- 移除範例圖片：`docs/public/bg.jpg`、`docs/public/og-image.jpg`、`docs/src/assets/hero.jpg`
-- 重置 `glossary.json`（僅保留 `_meta.description`，`updated` 清空）
-- 重置 `chapters.json` 為佔位章節設定
-- 重置 `style-decisions.json`（僅保留 `_meta.description`，`updated` 清空）
-- 刪除 `data/translation-progress*.json`
-- 重置 `docs/astro.config.mjs` 的標題與側邊欄
-- 寫入佔位首頁 `docs/src/content/docs/index.mdx`
-- 刪除 `plans/` 目錄
-
-不會清除：
-
-- `data/pdfs/*`（授權來源 PDF）
+清除範本殘留資料（`new-project` 會自動執行一次，一般不需手動跑）也記錄在同一份文件的「清除範例資料」小節。
 
 ---
 

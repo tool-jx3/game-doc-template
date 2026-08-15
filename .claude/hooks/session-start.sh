@@ -35,6 +35,11 @@ PYEOF
 )
 
 # --- Translation progress ---
+# Bounded by design: this hook's output is injected into every session's
+# context unconditionally (startup/resume/clear/compact), so listing every
+# chapter here would grow without limit as a project's corpus grows. Only
+# in_progress items (normally few) print in full; not_started items get a
+# capped preview — the full per-file list is one `progress_read.py` call away.
 translation_progress=$(uv run python - <<'PYEOF' 2>/dev/null || echo "(translation-progress.json not found — run /init-doc to create it)"
 import json
 p = json.load(open("data/translation-progress.json"))
@@ -42,20 +47,30 @@ chapters = p.get("chapters", [])
 if not chapters:
     print("No chapters tracked yet.")
 else:
-    status_icon = {
-        "not_started": "·",
-        "in_progress": "▶",
-        "completed":   "✓",
-    }
+    NOT_STARTED_PREVIEW_LIMIT = 5
     total     = len(chapters)
     completed = sum(1 for c in chapters if c.get("status") == "completed")
     lines = [f"{completed}/{total} chapters completed"]
-    for c in chapters:
-        icon  = status_icon.get(c.get("status", "not_started"), "·")
+
+    in_progress = [c for c in chapters if c.get("status") == "in_progress"]
+    not_started = [c for c in chapters if c.get("status") == "not_started"]
+
+    def fmt(c):
         title = c.get("title", c.get("id", "?"))
         fpath = c.get("file", "")
         fname = fpath.split("/")[-1] if fpath else ""
-        lines.append(f"  {icon} {title} ({fname})")
+        return f"  {title} ({fname})"
+
+    if in_progress:
+        lines.append(f"in_progress ({len(in_progress)}):")
+        lines.extend(fmt(c) for c in in_progress)
+    if not_started:
+        shown = not_started[:NOT_STARTED_PREVIEW_LIMIT]
+        lines.append(f"not_started ({len(not_started)}), next {len(shown)}:")
+        lines.extend(fmt(c) for c in shown)
+        remaining = len(not_started) - len(shown)
+        if remaining > 0:
+            lines.append(f"  …and {remaining} more (run progress_read.py for the full list)")
     print("\n".join(lines))
 PYEOF
 )
@@ -100,7 +115,7 @@ To update: use uv run python scripts/style_decisions.py subcommands (init / set-
 
 ${translation_progress}
 
-Status legend: · not_started  ▶ in_progress  ✓ completed
+Completed chapters aren't listed individually here (unbounded as a project grows); use progress_read.py --status completed for the full list.
 To update: uv run python scripts/progress_edit.py --file <path> --status <not_started|in_progress|completed>
 </project-context>
 CONTEXT
