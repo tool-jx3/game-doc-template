@@ -70,3 +70,11 @@
     對比組（overview-principles/index.md，此檔案在系統性 H3 缺陷被發現「之前」就先跑完 refiner）在瀏覽器裡清楚可見同一缺陷仍然存在：「本頁內容」側欄只列出 3 項（總覽/玩家原則/守護人原則），「自主性」「交談」「危險」「寶藏」等 14 個小節完全不在導覽中——用實際渲染結果印證了 Finding #17 的影響範圍與嚴重度，而不只是理論推測。此檔案刻意保留未補修，作為「修法前」對照證據。
 
 20. **【新發現，比 Finding #15 更明確的案例】在完全未翻譯的 `character-creation/basics.md` 頁面（尚未進入 super-translate 流程）用瀏覽器實際檢視，看到 PDF 頁碼殘留數字直接插在一份連續編號 1-100 的隨機姓名表中間**：例如清單跑到「17 Bryn Cooper」後，緊接著出現一行獨立的「24」，然後才接「18 Cai Crowther」繼續往下編號——頁碼「24」硬生生插斷了正在進行中的「17 → 18」編號序列。這比 Finding #15 描述的「裸數字與表格價格混淆」更嚴重：這裡頁碼數字本身的格式（獨立一行的純數字）與清單項目編號完全相同形式，如果不細看上下文語意，機器或人工都很容易誤判成「這份表格從 1 跳到 17，然後又出現一個 24，是不是漏了項目」而去查源頭，或誤把它當成合法清單項目保留。進一步印證 split_chapters.py／extract_pdf.py 需要處理頁碼標記過濾。
+
+## 流程缺口與 orchestrator 自我修正
+
+21. **【重大、確認】`term_read.py --fail-on-missing` 的「缺少使用」檢查在專案進度未完成時可能是假陽性通過（vacuous pass），不是有意義的信號**。根因：`build_corpus()`（`_term_lib.py`）把每個 Markdown 檔案的**完整原始內容**（含 frontmatter 的 `title`/`description`）都納入語料庫，而 `chapter-split` 在切分階段就已經為全部 13 個章節寫入中文 frontmatter 標題，與該章節「本文」是否已翻譯完全無關。實測：本次 5/13 進度下，`term_read.py` 回報「缺少使用: 0」，但直接 grep 檢查發現「裝備包」「市集」「法術書」這三個 glossary 術語，唯一出現的位置就是各自對應章節（gear-packages/marketplace/spellbooks，全部尚未翻譯）的 frontmatter `title` 欄位，本文仍是 100% 英文——術語檢查把「章節標題已翻譯」誤判為「術語已在本文中正確使用」。
+    影響：只要一個 glossary 術語剛好也是某章節的標題（游戲文件裡很常見，因為主要機制名詞常常本身就是章節名），`--fail-on-missing` 從專案一開始（章節切分完成、翻譯尚未開始）就永遠不會失敗，不只是本次 5/13 這個時間點才失真——super-translate SKILL.md Step 2「Terminology Preflight (Fail-Closed)」與 Step 7「Final Verification (MANDATORY)」兩處都仰賴這個檢查作為品質關卡，實際保護力比文件描述的弱。
+    修法建議：`build_corpus()` 或 `term_read.py` 應該有選項排除 frontmatter 區塊（僅檢查 `---` 之後的正文），或者依 `data/translation-progress.json` 的完成狀態，只把已完成章節的內容納入「缺少使用」檢查範圍，避免章節標題的翻譯掩蓋本文術語未使用的事實。
+
+22. **【orchestrator 自我修正記錄】本次 dogfood 執行中途，經第三方複核（advisor）指出我在跑完 4 個檔案的 refiner 之後，直接進了 writeback，跳過了 `super-translate/SKILL.md` Step 6 明訂的「refiner 完成後必須重新派 reviewer + md-reviewer 複查（cap 2 輪）」這一步**——等於 5 個檔案裡沒有任何一個是真的通過 reviewer 驗證才寫回的，違反了 Step 5「Only if reviewer passes」的前提。事後補跑 combat.md 的複查（reviewer+md-reviewer 併發、不提示標題跳級問題讓模型自行判斷）作為抽驗，其餘 4 個檔案未逐一補跑，記錄於此作為已知缺口，而非隱瞞。這本身也是一個值得注意的觀察：即使是刻意設計來測試 skill 品質關卡的這次 dogfood run，orchestrator（我）自己都會在執行壓力/長流程下漏掉一個關卡步驟——這正是 super-translate SKILL.md「Red Flags」表格裡「Just overwrite source, reviewer will pass next time」那條想防的事，但光靠文件裡的紅字提醒不足以完全防止，值得納入「這個 skill 未來要不要加機械化檢查」的討論（例如 draft.py writeback 前檢查是否存在對應的 reviewer pass 記錄）。
