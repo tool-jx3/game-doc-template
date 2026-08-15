@@ -76,9 +76,32 @@ def section_primary_slug(section_slug: str, section: dict, mode: str = "zh_only"
     return f"{prefix}{_first_leaf_slug(section_slug, section)}"
 
 
-def section_primary_href(section_slug: str, section: dict, mode: str = "zh_only") -> str:
-    """Return the primary doc href for a section."""
-    return f"/{section_primary_slug(section_slug, section, mode)}/"
+def deployment_base_path(style: dict) -> str:
+    """Return the configured deployment base path (e.g. '/repo-name'), or '' for root deploys.
+
+    Source of truth: style-decisions.json.deployment.base_path. Absolute hrefs written into
+    page content (hero.actions.link, LinkCard href) are literal strings Astro does NOT
+    base-resolve on its own — unlike Starlight-native sidebar `slug` entries, which Starlight
+    resolves against `base` internally. Any href built here for content-embedded links must be
+    prefixed with this value explicitly, or it silently 404s on non-root deploys (e.g. GitHub
+    Pages project sites).
+    """
+    deployment = style.get("deployment", {})
+    if deployment.get("target") != "github-pages":
+        # Only github-pages deploys need a non-root base path. Ignore any stale
+        # base_path left over from a previous target (e.g. switched back to root/Vercel)
+        # so content links never carry a prefix the current deploy doesn't serve under.
+        return ""
+    base_path = deployment.get("base_path", "") or ""
+    base_path = base_path.rstrip("/")
+    if base_path and not base_path.startswith("/"):
+        base_path = f"/{base_path}"
+    return base_path
+
+
+def section_primary_href(section_slug: str, section: dict, mode: str = "zh_only", base_path: str = "") -> str:
+    """Return the primary doc href for a section, including the deployment base path if set."""
+    return f"{base_path}/{section_primary_slug(section_slug, section, mode)}/"
 
 
 def first_file_description(section: dict) -> str:
@@ -98,6 +121,7 @@ def first_file_description(section: dict) -> str:
 # --- Index page generation ---
 
 def generate_index(chapters: dict, style: dict, mode: str = "zh_only") -> str:
+    base_path = deployment_base_path(style)
     sections = sorted_sections(chapters)
     first_slug = sections[0][0] if sections else "reference"
     second_slug = sections[1][0] if len(sections) > 1 else first_slug
@@ -105,9 +129,9 @@ def generate_index(chapters: dict, style: dict, mode: str = "zh_only") -> str:
     # Hero actions point to first two sections
     first_title = sections[0][1]["title"] if sections else "開始閱讀"
     second_title = sections[1][1]["title"] if len(sections) > 1 else ""
-    first_href = section_primary_href(first_slug, sections[0][1], mode) if sections else "/reference/"
+    first_href = section_primary_href(first_slug, sections[0][1], mode, base_path) if sections else f"{base_path}/reference/"
     second_href = (
-        section_primary_href(second_slug, sections[1][1], mode)
+        section_primary_href(second_slug, sections[1][1], mode, base_path)
         if len(sections) > 1
         else first_href
     )
@@ -163,7 +187,7 @@ def generate_index(chapters: dict, style: dict, mode: str = "zh_only") -> str:
     for slug, section in sections:
         title = section["title"]
         desc = first_file_description(section)
-        href = section_primary_href(slug, section, mode)
+        href = section_primary_href(slug, section, mode, base_path)
         lines.append(f'  <LinkCard title="{title}" href="{href}" description="{desc}" />')
 
     lines += [
@@ -273,6 +297,43 @@ def update_astro_sidebar(config_text: str, chapters: dict, mode: str = "zh_only"
     return result
 
 
+SITE_BASE_PATTERN = re.compile(
+    r"(export default defineConfig\(\{\n)(\tsite: '[^']*',\n\tbase: '[^']*',\n)?",
+)
+
+
+def _github_pages_site_url(repo_url: str) -> str:
+    """Derive https://<user>.github.io from a github.com repo URL."""
+    match = re.search(r"github\.com[:/]([^/]+)/", repo_url)
+    username = match.group(1) if match else "<github-username>"
+    return f"https://{username}.github.io"
+
+
+def update_astro_site_base(config_text: str, style: dict) -> str:
+    """Insert/update or remove the top-level `site`/`base` defineConfig keys.
+
+    Single source of truth is style-decisions.json.deployment:
+    - target == "github-pages": write `site`/`base` derived from repository.url + base_path.
+    - anything else (unset, "root"): strip any previously-written site/base block, since a
+      root deploy (Vercel, custom domain) must not carry a stale GitHub Pages base path.
+    """
+    deployment = style.get("deployment", {})
+    target = deployment.get("target")
+
+    if target == "github-pages":
+        base_path = deployment_base_path(style)
+        if not base_path:
+            print("⚠ deployment.target=github-pages 但 base_path 未設定，略過 site/base 寫入", file=sys.stderr)
+            return config_text
+        repo_url = style.get("repository", {}).get("url", "")
+        site_url = _github_pages_site_url(repo_url)
+        replacement = f"\\1\tsite: '{site_url}',\n\tbase: '{base_path}',\n"
+    else:
+        replacement = r"\1"
+
+    return SITE_BASE_PATTERN.sub(replacement, config_text, count=1)
+
+
 def main() -> None:
     if not CHAPTERS_FILE.exists():
         print(f"❌ 找不到 {CHAPTERS_FILE}", file=sys.stderr)
@@ -303,7 +364,7 @@ def main() -> None:
     INDEX_FILE.write_text(index_content, encoding="utf-8")
     print(f"✓ 已產生首頁: {INDEX_FILE}")
 
-    # Update astro.config.mjs sidebar
+    # Update astro.config.mjs sidebar + site/base
     if ASTRO_CONFIG.exists():
         original = ASTRO_CONFIG.read_text(encoding="utf-8")
         try:
@@ -311,11 +372,12 @@ def main() -> None:
         except SidebarPatchError as exc:
             print(f"❌ {exc}：{ASTRO_CONFIG}", file=sys.stderr)
             raise SystemExit(1) from exc
+        updated = update_astro_site_base(updated, style)
         if updated != original:
             ASTRO_CONFIG.write_text(updated, encoding="utf-8")
-            print(f"✓ 已更新側邊欄: {ASTRO_CONFIG}")
+            print(f"✓ 已更新側邊欄與 site/base 設定: {ASTRO_CONFIG}")
         else:
-            print("ℹ 側邊欄未變更")
+            print("ℹ 側邊欄與 site/base 設定未變更")
     else:
         print(f"⚠ 找不到 {ASTRO_CONFIG}", file=sys.stderr)
 

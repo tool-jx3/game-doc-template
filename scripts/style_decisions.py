@@ -126,6 +126,18 @@ def cmd_set_repository(args: argparse.Namespace) -> None:
     print(f"✓ 已更新 repository 設定: {args.style}")
 
 
+def cmd_set_deployment(args: argparse.Namespace) -> None:
+    patch: dict[str, Any] = {"deployment": {}}
+    for key in ("target", "base_path"):
+        value = getattr(args, key)
+        if value is not None:
+            patch["deployment"][key] = value
+    if not patch["deployment"]:
+        raise SystemExit("❌ set-deployment 至少需要一個欄位")
+    merge_and_save(args.style, args.schema, patch)
+    print(f"✓ 已更新 deployment 設定: {args.style}")
+
+
 def cmd_set_site(args: argparse.Namespace) -> None:
     patch: dict[str, Any] = {"site": {}}
     for key in ("title", "description", "tagline", "intro"):
@@ -316,6 +328,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_repo.add_argument("--url")
     p_repo.add_argument("--show-on-homepage", type=parse_bool)
     p_repo.set_defaults(func=cmd_set_repository)
+
+    p_deploy = sub.add_parser("set-deployment", help="Update deployment target and base path.")
+    p_deploy.add_argument("--target", choices=("github-pages", "root"))
+    p_deploy.add_argument("--base-path", dest="base_path", help="e.g. /repo-name for GitHub Pages, or empty string for root deploys")
+    p_deploy.set_defaults(func=cmd_set_deployment)
 
     p_site = sub.add_parser("set-site", help="Update homepage site metadata.")
     p_site.add_argument("--title")

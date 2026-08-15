@@ -2,6 +2,8 @@
 
 基於 Astro + Starlight 的遊戲規則文件模板，專為 TRPG 設計，也適用於任何遊戲規則文件。
 
+本模板內建作者本人的翻譯風格（見 `.claude/skills/translate/translator-style.md`），`translate`/`super-translate`/`bilingual-translate` 預設都會套用這份風格；由此模板複製出的新專案會自動繼承，不需每個專案重新設定。
+
 ## 快速開始
 
 ### 1. 建立專案
@@ -190,7 +192,7 @@ Windows 使用者需啟用 `git config core.symlinks true` 並以系統管理員
    在 `docs/` 下執行 `bun dev`，檢查頁面、目錄、連結、圖片與主題樣式。
 
 10. 建置與部署  
-    `bun run build` 後部署到 Vercel（或其他靜態站台服務）。
+    `bun run build` 確認無誤後部署——Public 專案優先用 GitHub Pages，需要密碼保護或私有部署則用 Vercel。詳見〈部署〉章節。
 
 ---
 
@@ -204,13 +206,82 @@ Windows 使用者需啟用 `git config core.symlinks true` 並以系統管理員
 
 ## 部署
 
-### Vercel（推薦）
+先判斷專案可見度：**Public 專案優先用 GitHub Pages**（免費、不需額外服務、與現有 repo 直接整合）；需要密碼保護或私有部署，才用 Vercel。
+
+### GitHub Pages（Public 專案推薦）
+
+1. 在 `docs/astro.config.mjs` 設定 `site` 與 `base`（`base` 要對應 repo 名稱）：
+
+   ```js
+   export default defineConfig({
+   	site: 'https://<github-username>.github.io',
+   	base: '/<repo-name>',
+   	// ...
+   });
+   ```
+
+2. 新增 `.github/workflows/deploy.yml`：
+
+   ```yaml
+   name: Deploy to GitHub Pages
+
+   on:
+     push:
+       branches: [main]
+     workflow_dispatch:
+
+   permissions:
+     contents: read
+     pages: write
+     id-token: write
+
+   concurrency:
+     group: pages
+     cancel-in-progress: false
+
+   jobs:
+     build:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v4
+         - uses: oven-sh/setup-bun@v2
+         - working-directory: docs
+           run: bun install
+         - working-directory: docs
+           run: bun run build
+         - uses: actions/configure-pages@v5
+         - uses: actions/upload-pages-artifact@v3
+           with:
+             path: docs/dist
+
+     deploy:
+       needs: build
+       runs-on: ubuntu-latest
+       environment:
+         name: github-pages
+         url: ${{ steps.deployment.outputs.page_url }}
+       steps:
+         - id: deployment
+           uses: actions/deploy-pages@v4
+   ```
+
+3. 推送到 `main`，並啟用 Pages（Actions 來源）：
+
+   ```bash
+   gh api repos/<owner>/<repo>/pages -X POST -f "build_type=workflow"
+   ```
+
+4. 之後每次推送到 `main` 都會自動重新部署，網址為 `https://<github-username>.github.io/<repo-name>/`。
+
+GitHub Pages 是純靜態託管，沒有 middleware，無法做密碼保護——需要密碼保護時請改用下方的 Vercel 流程。
+
+### Vercel（需要密碼保護或私有部署時使用）
 
 1. 推送到 GitHub
 2. 在 Vercel 匯入專案
 3. 自動部署
 
-### 密碼保護（可選）
+### 密碼保護（可選，僅 Vercel 支援）
 
 在 Vercel 環境變數設定 `SITE_PASSWORD` 即可啟用密碼保護：
 

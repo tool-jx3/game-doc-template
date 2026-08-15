@@ -44,6 +44,14 @@
         "show_on_homepage": { "type": "boolean" }
       }
     },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target": { "enum": ["github-pages", "root"] },
+        "base_path": { "type": "string" }
+      }
+    },
     "site": {
       "type": "object",
       "additionalProperties": false,

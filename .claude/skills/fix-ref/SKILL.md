@@ -71,9 +71,10 @@ After editing:
 
 ## Link Rules
 
-- Use absolute internal routes from the docs root for cross-page links: `/rules/basic-moves/`
-- Use anchors for same-page references: `#damage`
-- Use combined route plus anchor for cross-page subsections: `/rules/combat/#damage`
+- Before writing any absolute route, read `style-decisions.json.deployment.base_path` (empty string if unset). Astro/Starlight does NOT auto-prepend the deploy base to literal `[text](/path/)` links written into page content — only Starlight-native constructs (sidebar `slug` entries, generated routes) resolve it automatically. A hardcoded absolute route missing this prefix 404s on any non-root deploy (e.g. a GitHub Pages project site).
+- Use absolute internal routes from the docs root, prefixed with the base path: `<base_path>/rules/basic-moves/` (e.g. `/rules/basic-moves/` when base_path is empty, `/my-repo/rules/basic-moves/` when base_path is `/my-repo`)
+- Use anchors for same-page references: `#damage` (anchors never need the base path — they don't change the route)
+- Use combined route plus anchor for cross-page subsections: `<base_path>/rules/combat/#damage`
 - Do not invent routes or anchors that do not exist
 
 ## Red Flags
