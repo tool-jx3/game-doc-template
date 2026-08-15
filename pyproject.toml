@@ -13,8 +13,8 @@ dependencies = [
     "spacy-lookups-data>=1.0.5",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.0.0",
 ]
 

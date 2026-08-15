@@ -8,6 +8,8 @@ import json
 import shutil
 from pathlib import Path
 
+from generate_nav import SIDEBAR_PATTERN
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MARKDOWN_DIR = PROJECT_ROOT / "data" / "markdown"
 DOCS_CONTENT_DIR = PROJECT_ROOT / "docs" / "src" / "content" / "docs"
@@ -136,7 +138,7 @@ def clean_glossary(apply: bool) -> None:
         current = json.loads(GLOSSARY_PATH.read_text(encoding="utf-8"))
         meta = current.get("_meta", {})
         description = meta.get("description") or default_description
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         description = default_description
 
     cleaned = {
@@ -172,7 +174,7 @@ def reset_style_decisions(apply: bool) -> None:
         try:
             meta = json.loads(STYLE_PATH.read_text(encoding="utf-8")).get("_meta", {})
             description = meta.get("description") or description
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError):
             pass
     _write_json(STYLE_PATH, {"_meta": {"description": description, "updated": ""}}, apply, "style-decisions")
 
@@ -191,11 +193,13 @@ def reset_astro_config(apply: bool) -> None:
 
     text = ASTRO_CONFIG.read_text(encoding="utf-8")
     text = re.sub(r"title: '[^']*',", "title: '遊戲規則文件',", text, count=1)
-    # Already-empty sidebar (idempotent re-run): skip the destructive regex below.
-    # Otherwise its non-greedy `.*?\n\s*],` would find no newline before the very
-    # next `],` and over-consume past `plugins`/`customCss`/closing brackets.
-    if not re.search(r"sidebar: \[\s*\],", text):
-        text = re.sub(r"sidebar: \[.*?\n(\s*)\],", "sidebar: [],", text, flags=re.DOTALL, count=1)
+    # Reuse generate_nav's line-anchored pattern: it already stops at the
+    # sidebar array's own `],` instead of over-consuming into a later
+    # multi-line `],` (e.g. `plugins`), and matches the collapsed empty form
+    # too so no separate idempotency guard is needed.
+    text = SIDEBAR_PATTERN.sub(
+        lambda m: f"{m.group('indent')}sidebar: [],", text, count=1
+    )
     print(f"reset astro config: {ASTRO_CONFIG.relative_to(PROJECT_ROOT)}")
     if apply:
         ASTRO_CONFIG.write_text(text, encoding="utf-8")

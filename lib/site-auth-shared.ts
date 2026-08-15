@@ -60,6 +60,13 @@ export function sanitizeRedirect(redirect: string | null | undefined): string {
   return normalized;
 }
 
+/** Defense in depth: even if sanitizeRedirect has a gap, never resolve a
+ *  redirect target off-origin. */
+export function pinToOrigin(redirect: string, origin: string): URL {
+  const url = new URL(redirect, origin);
+  return url.origin === origin ? url : new URL("/", origin);
+}
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

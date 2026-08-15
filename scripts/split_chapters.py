@@ -196,6 +196,11 @@ def normalize_files(files: dict) -> dict:
 
     Entries without slashes are kept as-is.  Group nodes created by
     normalisation get ``title`` set to the raw slug and no ``order``.
+
+    Raises:
+        ValueError: a key is used both as a flat leaf and as a slash-nested
+            group prefix (e.g. ``"combat"`` and ``"combat/actions"``), since
+            a single key cannot be both a leaf and a group.
     """
     result: dict = {}
     for key, entry in files.items():
@@ -203,10 +208,20 @@ def normalize_files(files: dict) -> dict:
             parts = key.split("/")
             parent = parts[0]
             child = "/".join(parts[1:])
+            if parent in result and "files" not in result[parent]:
+                raise ValueError(
+                    f"Key collision in chapter files: '{parent}' is used as a "
+                    f"flat leaf entry and as a group prefix (from '{key}')"
+                )
             if parent not in result:
                 result[parent] = {"title": parent, "files": {}}
             result[parent]["files"][child] = entry
         else:
+            if key in result and "files" in result[key]:
+                raise ValueError(
+                    f"Key collision in chapter files: '{key}' is used as a "
+                    f"flat leaf entry and as a group prefix (from a nested key)"
+                )
             result[key] = entry
     # Recurse for multi-level slash paths
     for key, entry in result.items():

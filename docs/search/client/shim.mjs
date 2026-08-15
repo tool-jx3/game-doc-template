@@ -7,6 +7,7 @@ import { createSegmenter, HAN_ONLY } from './segment.mjs';
 import { expansionCandidates, mergeResults, withCleanExcerpt } from './expand.mjs';
 
 let basePath = null;
+let basePathPromise = null;
 let vocabPromise = null;
 let hanVocab = null;
 let segmenter = null;
@@ -28,9 +29,17 @@ function ownBasePath() {
  * 所以 options() 一律補上；未走 options() 的呼叫端則由 search()／preload() 補。
  */
 async function ensureBasePath() {
-	if (basePath) return;
-	basePath = ownBasePath();
-	await core.options({ basePath });
+	// search() 與 preload() 可能並發呼叫；basePath 在 core.options() resolve 前
+	// 就先同步設成 truthy 會讓後到的呼叫誤以為已經套用完畢而提早放行，因此改成
+	// 讓所有並發呼叫共享同一個 in-flight promise。
+	if (basePath && !basePathPromise) return;
+	if (!basePathPromise) {
+		basePathPromise = (async () => {
+			basePath = ownBasePath();
+			await core.options({ basePath });
+		})();
+	}
+	return basePathPromise;
 }
 
 /** 詞彙表與索引同目錄。 */

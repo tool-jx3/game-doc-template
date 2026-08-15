@@ -246,6 +246,22 @@ class TestNormalizeFiles:
     def test_empty_files(self):
         assert normalize_files({}) == {}
 
+    def test_flat_leaf_then_nested_same_prefix_raises(self):
+        files = {
+            "combat": {"title": "Combat", "pages": [1, 2], "order": 0},
+            "combat/actions": {"title": "Actions", "pages": [5, 7], "order": 1},
+        }
+        with pytest.raises(ValueError, match="combat"):
+            normalize_files(files)
+
+    def test_nested_then_flat_leaf_same_prefix_raises(self):
+        files = {
+            "combat/actions": {"title": "Actions", "pages": [5, 7], "order": 0},
+            "combat": {"title": "Combat", "pages": [1, 2], "order": 1},
+        }
+        with pytest.raises(ValueError, match="combat"):
+            normalize_files(files)
+
 
 # ---------------------------------------------------------------------------
 # resolve_config

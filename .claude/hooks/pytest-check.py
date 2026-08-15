@@ -50,7 +50,7 @@ def run_pytest() -> tuple[bool, str]:
             ['uv', 'run', 'pytest', '-v', '--tb=short', '-x'],
             capture_output=True,
             text=True,
-            timeout=45,  # 45 second timeout
+            timeout=90,  # 90 second timeout (cold uv-sync run measured ~39s on 365 tests)
             cwd=Path.cwd()
         )
 
@@ -75,7 +75,7 @@ def run_pytest() -> tuple[bool, str]:
             return False, '\n'.join(limited_output)
 
     except subprocess.TimeoutExpired:
-        return False, "Pytest timeout (45s) - tests may be hanging or too slow"
+        return False, "Pytest timeout (90s) - tests may be hanging or too slow"
     except FileNotFoundError:
         return False, "uv not found - cannot run pytest"
     except Exception as e:

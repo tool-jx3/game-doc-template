@@ -97,7 +97,7 @@ export default async function middleware(request: Request) {
   }
 
   const url = new URL(request.url);
-  const { pathname, search } = url;
+  const { pathname } = url;
 
   // Skip API routes
   if (pathname.startsWith("/api/")) {
@@ -117,7 +117,11 @@ export default async function middleware(request: Request) {
   }
 
   const error = url.searchParams.get("error") === "1";
-  return new Response(getLoginHTML(pathname + search.replace(/[?&]error=1/, ''), error), {
+  const cleanParams = new URLSearchParams(url.searchParams);
+  cleanParams.delete("error");
+  const cleanQuery = cleanParams.toString();
+  const redirectPath = pathname + (cleanQuery ? `?${cleanQuery}` : "");
+  return new Response(getLoginHTML(redirectPath, error), {
     status: 401,
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });

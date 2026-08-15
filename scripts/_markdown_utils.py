@@ -1,6 +1,7 @@
 """Markdown 文字處理共用工具函式。"""
 
 import re
+from collections.abc import Iterator
 from urllib.parse import unquote
 
 # ---------------------------------------------------------------------------
@@ -76,6 +77,31 @@ def clean_content(text: str, patterns: list[str]) -> str:
 def count_page_text_tokens(text: str) -> int:
     """估算頁面文字量。"""
     return len(re.findall(r"\S+", text))
+
+
+# ---------------------------------------------------------------------------
+# Shared chapters.json 'files' tree walker
+# ---------------------------------------------------------------------------
+
+
+def iter_leaves(files: dict, path_prefix: str = "") -> Iterator[tuple[str, dict]]:
+    """Recursively walk a normalized chapters.json ``files`` dict.
+
+    Yields ``(key_path, entry)`` for each leaf node (an entry with ``pages``),
+    in ``order``-sorted sequence, matching the sibling order used when
+    writing files to disk. ``key_path`` joins nested group keys with ``/``.
+
+    Raises:
+        ValueError: an entry has neither ``pages`` nor ``files``.
+    """
+    for key, entry in sorted(files.items(), key=lambda kv: kv[1].get("order", 9999)):
+        key_path = f"{path_prefix}/{key}" if path_prefix else key
+        if "pages" in entry:
+            yield key_path, entry
+        elif "files" in entry:
+            yield from iter_leaves(entry["files"], key_path)
+        else:
+            raise ValueError(f"Invalid entry '{key}': must have 'pages' or 'files'")
 
 
 # ---------------------------------------------------------------------------

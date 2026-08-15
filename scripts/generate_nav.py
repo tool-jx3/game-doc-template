@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from _markdown_utils import yaml_safe
+from split_chapters import normalize_files
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CHAPTERS_FILE = PROJECT_ROOT / "chapters.json"
@@ -287,6 +288,12 @@ def main() -> None:
     if not chapters:
         print("❌ chapters.json 中沒有章節資料", file=sys.stderr)
         raise SystemExit(1)
+
+    # chapters.json 允許扁平斜線路徑鍵（如 "combat/actions"），實際輸出的文件樹
+    # 由 split_chapters.py 透過 normalize_files() 展開後才落地；此處必須套用相同
+    # 正規化，導覽/首頁連結與側邊欄才會對齊 split_chapters.py 實際寫出的結構。
+    for section in chapters.values():
+        section["files"] = normalize_files(section.get("files", {}))
 
     style = load_json(STYLE_FILE) if STYLE_FILE.exists() else {}
 

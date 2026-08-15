@@ -92,6 +92,44 @@ def test_reset_astro_config_idempotent_on_second_run(monkeypatch, tmp_path):
     assert second_pass == first_pass
 
 
+def test_reset_astro_config_nested_populated_sidebar_preserves_siblings(monkeypatch, tmp_path):
+    """Regression for the old unanchored regex over-consuming into a later
+    `],` (e.g. `plugins`'s own closing bracket) when the sidebar sits nested
+    inside `starlight({...})`."""
+    _patch_paths(monkeypatch, tmp_path)
+    cfg = tmp_path / "docs" / "astro.config.mjs"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_text(
+        "export default defineConfig({\n"
+        "\tintegrations: [\n"
+        "\t\tstarlight({\n"
+        "\t\t\tsidebar: [\n\t\t\t\t{ label: 'X', slug: 'x' },\n\t\t\t],\n"
+        "\t\t\tplugins: [starlightAutoSidebar()],\n"
+        "\t\t\tcustomCss: ['./src/styles/custom.css'],\n"
+        "\t\t}),\n"
+        "\t],\n"
+        "});\n",
+        encoding="utf-8",
+    )
+    csd.reset_astro_config(apply=True)
+    text = cfg.read_text(encoding="utf-8")
+    assert "sidebar: []," in text
+    assert "plugins: [starlightAutoSidebar()]," in text
+    assert "customCss: ['./src/styles/custom.css']," in text
+    assert text.rstrip().endswith("});")
+
+
+def test_clean_glossary_handles_invalid_utf8(monkeypatch, tmp_path):
+    _patch_paths(monkeypatch, tmp_path)
+    glossary = tmp_path / "glossary.json"
+    glossary.write_bytes(b"\xff\xfe not valid utf-8")
+
+    csd.clean_glossary(apply=True)
+
+    payload = json.loads(glossary.read_text(encoding="utf-8"))
+    assert payload["_meta"]["description"] == "術語表 - 英文遊戲術語對照繁體中文翻譯"
+
+
 def test_write_placeholder_index_and_remove_plans(monkeypatch, tmp_path):
     _patch_paths(monkeypatch, tmp_path)
     (tmp_path / "plans").mkdir()
