@@ -69,6 +69,7 @@ Split policy for both planners:
 4. Dispatch toc planner using `./split-planner-prompt.md` to generate TOC-aligned draft `chapters_config`.
 5. Dispatch wordcount planner using `./split-wordcount-planner-prompt.md` to rebalance file granularity based on word count while preserving TOC order.
 6. If topology planner or wordcount planner reports unresolved critical issues, stop and ask user in Traditional Chinese before writing the final config.
+7. Read the toc planner's `risk_notes` even when there is no `unresolved_critical` entry — `risk_notes` is where a table/list-split-across-boundary conflict (see `split-planner-prompt.md`) gets recorded when neither adjustment fits. Report any non-empty `risk_notes` to the user in Traditional Chinese before writing the final config; do not silently accept a boundary that cuts through a table.
 
 ### Step 4: Finalize Config and Image Policy
 
@@ -135,6 +136,7 @@ Validate:
 - page coverage completeness
 - image path integrity
 - frontmatter correctness
+- no table or enumerated list split across a file boundary: for every generated file, check whether its first content block right after frontmatter is a bare list/table item whose number is greater than 1 (e.g. it starts at "91" instead of "1"). This is a strong signal that a table was cut mid-way by the page-range boundary and the planner's own self-check (in `split-planner-prompt.md`) was missed or its `risk_notes` was ignored. If found, do not treat it as acceptable output — move the orphaned rows into the file that owns the rest of the table (matching its existing table/list format exactly) before handing off.
 
 Preview if needed:
 

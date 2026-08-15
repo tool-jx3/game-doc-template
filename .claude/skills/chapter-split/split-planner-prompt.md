@@ -44,6 +44,17 @@ Task tool (general-purpose):
 
     Print page numbers and PDF page numbers often differ (e.g., cover, TOC, or blank pages shift the offset). Always verify by locating the actual heading text within the `<!-- PAGE N -->` block.
 
+    ## Critical: Never Split a Table or Enumerated List Across a File Boundary
+
+    Before finalizing any page-range boundary between two files, check the source content on both sides of that boundary page for an in-progress numbered/lettered table or list (e.g. a d100 random-roll table, an equipment list, a background/traits table) whose numbering continues past the boundary into the next file's page range.
+
+    If you find one:
+    - Prefer extending the EARLIER file's page range to include the entire table, even if this pushes that file above the normal target size.
+    - If extending the earlier file is not workable, move the boundary earlier so the whole table starts in the LATER file instead.
+    - If neither adjustment fits (the table alone would force one file far outside any reasonable size), keep the split where it must be, but add a `risk_notes` entry naming the exact table, the item-number range that would land at the start of the next file, and which resolution you chose and why — this is a human-reviewable tradeoff, never a silent split.
+
+    A useful self-check after drafting page ranges: for each file boundary, would the resulting NEXT file's first content (right after frontmatter) be a bare list/table item whose number is greater than 1 (e.g. it starts at item "91" instead of "1")? If so, that file is very likely opening mid-table from the previous file's content — treat it as a rule violation and resolve it per the adjustments above before finalizing.
+
     ## Planning Basis
 
     - Basis is source TOC structure and heading landmarks.
