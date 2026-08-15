@@ -342,3 +342,95 @@ class TestUpdateAstroSidebar:
 
         with pytest.raises(gn.SidebarPatchError):
             gn.update_astro_sidebar(config_text, SAMPLE_CHAPTERS)
+
+
+TEMPLATE_CONFIG = (
+    "export default defineConfig({\n"
+    "\tmarkdown: {\n"
+    "\t\tsmartypants: false,\n"
+    "\t},\n"
+    "\tintegrations: [],\n"
+    "});\n"
+)
+
+MANUAL_SITE_BASE_CONFIG = (
+    "export default defineConfig({\n"
+    "\tintegrations: [],\n"
+    "  site: 'https://someone.github.io',\n"
+    "  base: '/my-repo',\n"
+    "});\n"
+)
+
+
+class TestDeploymentBasePath:
+    def test_empty_when_deployment_unset(self):
+        assert gn.deployment_base_path({}) == ""
+
+    def test_empty_when_target_root_even_with_stale_base_path(self):
+        style = {"deployment": {"target": "root", "base_path": "/old-repo"}}
+        assert gn.deployment_base_path(style) == ""
+
+    def test_normalizes_leading_and_trailing_slashes(self):
+        style = {"deployment": {"target": "github-pages", "base_path": "my-repo/"}}
+        assert gn.deployment_base_path(style) == "/my-repo"
+
+
+class TestUpdateAstroSiteBase:
+    GH_STYLE = {
+        "deployment": {"target": "github-pages", "base_path": "/my-repo"},
+        "repository": {"url": "https://github.com/someone/my-repo"},
+    }
+
+    def test_inserts_site_and_base_for_github_pages(self):
+        result = gn.update_astro_site_base(TEMPLATE_CONFIG, self.GH_STYLE)
+
+        assert "\tsite: 'https://someone.github.io',\n" in result
+        assert "\tbase: '/my-repo',\n" in result
+
+    def test_rewrites_existing_generated_block_without_duplicates(self):
+        once = gn.update_astro_site_base(TEMPLATE_CONFIG, self.GH_STYLE)
+        renamed = {
+            "deployment": {"target": "github-pages", "base_path": "/renamed"},
+            "repository": {"url": "https://github.com/someone/renamed"},
+        }
+
+        twice = gn.update_astro_site_base(once, renamed)
+
+        assert twice.count("site:") == 1
+        assert twice.count("base:") == 1
+        assert "base: '/renamed'" in twice
+        assert "/my-repo" not in twice
+
+    def test_strips_generated_block_when_target_root(self):
+        once = gn.update_astro_site_base(TEMPLATE_CONFIG, self.GH_STYLE)
+
+        stripped = gn.update_astro_site_base(once, {"deployment": {"target": "root"}})
+
+        assert "site:" not in stripped
+        assert "base:" not in stripped
+
+    def test_skips_and_warns_when_repository_url_unusable(self, capsys):
+        style = {"deployment": {"target": "github-pages", "base_path": "/my-repo"}}
+
+        result = gn.update_astro_site_base(TEMPLATE_CONFIG, style)
+
+        assert result == TEMPLATE_CONFIG
+        assert "<github-username>" not in result
+        assert "repository.url" in capsys.readouterr().err
+
+    def test_never_duplicates_manually_placed_site_base(self, capsys):
+        # A hand-edited/reformatted site/base block does not match the generated
+        # pattern; inserting a second pair would leave duplicate JS object keys.
+        result = gn.update_astro_site_base(MANUAL_SITE_BASE_CONFIG, self.GH_STYLE)
+
+        assert result == MANUAL_SITE_BASE_CONFIG
+        assert result.count("site:") == 1
+        assert capsys.readouterr().err
+
+    def test_warns_when_stale_base_cannot_be_stripped(self, capsys):
+        result = gn.update_astro_site_base(
+            MANUAL_SITE_BASE_CONFIG, {"deployment": {"target": "root"}}
+        )
+
+        assert result == MANUAL_SITE_BASE_CONFIG
+        assert capsys.readouterr().err

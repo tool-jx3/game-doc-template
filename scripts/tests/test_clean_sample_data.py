@@ -38,6 +38,29 @@ def test_reset_style_decisions_keeps_only_meta(monkeypatch, tmp_path):
     assert list(data.keys()) == ["_meta"]
 
 
+def test_reset_style_decisions_preserves_repository_and_deployment(monkeypatch, tmp_path):
+    # new-project persists repository/deployment BEFORE init-doc triggers this
+    # reset; wiping them silently reverts the GitHub Pages base-path config.
+    _patch_paths(monkeypatch, tmp_path)
+    (tmp_path / "style-decisions.json").write_text(
+        json.dumps(
+            {
+                "_meta": {"description": "d", "updated": "x"},
+                "site": {"title": "Sample"},
+                "repository": {"name": "my-repo", "url": "https://github.com/u/my-repo"},
+                "deployment": {"target": "github-pages", "base_path": "/my-repo"},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    csd.reset_style_decisions(apply=True)
+    data = json.loads((tmp_path / "style-decisions.json").read_text(encoding="utf-8"))
+    assert data["repository"]["url"] == "https://github.com/u/my-repo"
+    assert data["deployment"] == {"target": "github-pages", "base_path": "/my-repo"}
+    assert "site" not in data
+
+
 def test_remove_progress_files(monkeypatch, tmp_path):
     _patch_paths(monkeypatch, tmp_path)
     (tmp_path / "data").mkdir()

@@ -169,14 +169,27 @@ def reset_chapters(apply: bool) -> None:
 
 
 def reset_style_decisions(apply: bool) -> None:
+    """Reset style decisions to a blank record.
+
+    `repository` and `deployment` survive the reset: new-project persists them
+    BEFORE init-doc triggers this cleanup, and generate_nav.py / fix-ref read
+    them to emit base-path-aware links — wiping them here silently reverts a
+    GitHub Pages project to root-relative links that 404 on deploy.
+    """
     description = "翻譯與格式風格決策記錄"
+    preserved: dict = {}
     if STYLE_PATH.exists():
         try:
-            meta = json.loads(STYLE_PATH.read_text(encoding="utf-8")).get("_meta", {})
+            current = json.loads(STYLE_PATH.read_text(encoding="utf-8"))
+            meta = current.get("_meta", {})
             description = meta.get("description") or description
+            for key in ("repository", "deployment"):
+                if isinstance(current.get(key), dict):
+                    preserved[key] = current[key]
         except (json.JSONDecodeError, OSError, UnicodeDecodeError):
             pass
-    _write_json(STYLE_PATH, {"_meta": {"description": description, "updated": ""}}, apply, "style-decisions")
+    payload = {"_meta": {"description": description, "updated": ""}, **preserved}
+    _write_json(STYLE_PATH, payload, apply, "style-decisions")
 
 
 def remove_progress_files(apply: bool) -> None:

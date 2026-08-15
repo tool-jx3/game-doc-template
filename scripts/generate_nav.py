@@ -302,11 +302,18 @@ SITE_BASE_PATTERN = re.compile(
 )
 
 
-def _github_pages_site_url(repo_url: str) -> str:
-    """Derive https://<user>.github.io from a github.com repo URL."""
+def _github_pages_site_url(repo_url: str) -> str | None:
+    """Derive https://<user>.github.io from a github.com repo URL, or None if underivable."""
     match = re.search(r"github\.com[:/]([^/]+)/", repo_url)
-    username = match.group(1) if match else "<github-username>"
-    return f"https://{username}.github.io"
+    if not match:
+        return None
+    return f"https://{match.group(1)}.github.io"
+
+
+# Any top-level-looking site:/base: key. Used to detect a hand-edited or
+# reformatted block that SITE_BASE_PATTERN cannot see (space indentation,
+# double quotes, moved below other keys, ...).
+FOREIGN_SITE_BASE_RE = re.compile(r"^\s*(?:site|base)\s*:", re.MULTILINE)
 
 
 def update_astro_site_base(config_text: str, style: dict) -> str:
@@ -316,9 +323,19 @@ def update_astro_site_base(config_text: str, style: dict) -> str:
     - target == "github-pages": write `site`/`base` derived from repository.url + base_path.
     - anything else (unset, "root"): strip any previously-written site/base block, since a
       root deploy (Vercel, custom domain) must not carry a stale GitHub Pages base path.
+
+    Only a block this function wrote (tab-indented, single-quoted, immediately after
+    `defineConfig({`) is ever rewritten. A site/base block in any other shape is treated
+    as hand-managed: warn and leave the config untouched instead of silently inserting a
+    duplicate pair or leaving a stale base behind.
     """
     deployment = style.get("deployment", {})
     target = deployment.get("target")
+
+    match = SITE_BASE_PATTERN.search(config_text)
+    generated_block = match.group(2) if match else None
+    remainder = config_text.replace(generated_block, "", 1) if generated_block else config_text
+    has_foreign_site_base = bool(FOREIGN_SITE_BASE_RE.search(remainder))
 
     if target == "github-pages":
         base_path = deployment_base_path(style)
@@ -327,11 +344,34 @@ def update_astro_site_base(config_text: str, style: dict) -> str:
             return config_text
         repo_url = style.get("repository", {}).get("url", "")
         site_url = _github_pages_site_url(repo_url)
+        if site_url is None:
+            print(
+                "⚠ repository.url 未設定或不是 github.com 網址，無法推導 GitHub Pages site 網址，"
+                "略過 site/base 寫入（請先執行 style_decisions.py set-repository --url）",
+                file=sys.stderr,
+            )
+            return config_text
+        if match is None:
+            print("⚠ 在 astro.config.mjs 找不到 defineConfig({ 插入點，略過 site/base 寫入", file=sys.stderr)
+            return config_text
+        if has_foreign_site_base:
+            print(
+                "⚠ astro.config.mjs 已含非產生格式的 site/base 設定，為避免重複鍵不自動改寫；"
+                "請手動更新，或移除該區塊後重新執行 generate_nav.py",
+                file=sys.stderr,
+            )
+            return config_text
         replacement = f"\\1\tsite: '{site_url}',\n\tbase: '{base_path}',\n"
-    else:
-        replacement = r"\1"
+        return SITE_BASE_PATTERN.sub(replacement, config_text, count=1)
 
-    return SITE_BASE_PATTERN.sub(replacement, config_text, count=1)
+    result = SITE_BASE_PATTERN.sub(r"\1", config_text, count=1) if generated_block else config_text
+    if has_foreign_site_base:
+        print(
+            "⚠ deployment.target 非 github-pages，但 astro.config.mjs 仍含非產生格式的 site/base 設定，"
+            "無法自動移除；若為 GitHub Pages 殘留請手動刪除",
+            file=sys.stderr,
+        )
+    return result
 
 
 def main() -> None:

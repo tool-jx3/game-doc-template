@@ -237,3 +237,54 @@ def test_validate_style_decisions_accepts_default_payload(monkeypatch, tmp_path)
     monkeypatch.setattr(vsd, "parse_args", lambda: args)
 
     vsd.main()
+
+
+def test_merge_codex_tier_preference_passes_schema(tmp_path):
+    # codex-tier.md §1-§2 persist this shape; the schema must accept it or the
+    # "ask once, then silent" contract breaks on every project's first run.
+    style_path = tmp_path / "style-decisions.json"
+    _seed_style(style_path)
+
+    sd.merge_and_save(style_path, SCHEMA_PATH, {"codex_tier": {"enabled": True}})
+    sd.merge_and_save(style_path, SCHEMA_PATH, {"codex_tier": {"install_declined": True}})
+
+    payload = json.loads(style_path.read_text(encoding="utf-8"))
+    assert payload["codex_tier"] == {"enabled": True, "install_declined": True}
+
+
+def test_cmd_set_deployment_writes_target_and_base_path(tmp_path):
+    style_path = tmp_path / "style-decisions.json"
+    _seed_style(style_path)
+
+    args = argparse.Namespace(
+        style=style_path, schema=SCHEMA_PATH, target="github-pages", base_path="/my-repo"
+    )
+    sd.cmd_set_deployment(args)
+
+    payload = json.loads(style_path.read_text(encoding="utf-8"))
+    assert payload["deployment"] == {"target": "github-pages", "base_path": "/my-repo"}
+
+
+def test_cmd_set_deployment_requires_at_least_one_field(tmp_path):
+    style_path = tmp_path / "style-decisions.json"
+    _seed_style(style_path)
+
+    args = argparse.Namespace(style=style_path, schema=SCHEMA_PATH, target=None, base_path=None)
+    with pytest.raises(SystemExit):
+        sd.cmd_set_deployment(args)
+
+
+def test_page_text_engine_opendataloader_accepted_by_schema(tmp_path):
+    # The CLI offers "opendataloader" (the project's default PDF engine); the
+    # schema must accept everything the CLI offers, globally and per document.
+    style_path = tmp_path / "style-decisions.json"
+    _seed_style(style_path)
+
+    sd.merge_and_save(
+        style_path, SCHEMA_PATH, {"document_format": {"page_text_engine": "opendataloader"}}
+    )
+    sd.merge_and_save(
+        style_path,
+        SCHEMA_PATH,
+        {"document_format": {"documents": {"Rulebook": {"page_text_engine": "opendataloader"}}}},
+    )

@@ -43,6 +43,11 @@ INDEX_CACHE = CACHE_DIR / "index.json"
 CANDIDATE_CACHE = CACHE_DIR / "candidates.json"
 
 WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9'_-]{2,}")
+# CJK prose has no inter-word spaces, so both the spaCy-English and the
+# word-boundary-regex matching paths see a whole Han run as one token and can
+# never find a term embedded mid-sentence. Terms containing any CJK character
+# must be matched by plain substring search instead.
+CJK_CHAR_RE = re.compile(r"[㐀-䶿一-鿿豈-﫿]")
 STOPWORDS = {
     "the", "and", "for", "with", "that", "this", "from", "are", "you", "your",
     "not", "can", "all", "any", "into", "use", "using", "each", "when", "then",
@@ -285,7 +290,15 @@ def _term_pattern_inflect(term: str) -> re.Pattern[str]:
     return re.compile(rf"(?<![A-Za-z0-9_])(?:{union})(?![A-Za-z0-9_])", re.IGNORECASE)
 
 
+def _contains_cjk(text: str) -> bool:
+    return bool(CJK_CHAR_RE.search(text))
+
+
 def find_term_spans(content: str, term: str) -> list[tuple[int, int]]:
+    if _contains_cjk(term):
+        pattern = re.compile(re.escape(term))
+        return [(m.start(), m.end()) for m in pattern.finditer(content)]
+
     if not SPACY_AVAILABLE:
         pattern = _term_pattern_inflect(term)
         return [(m.start(), m.end()) for m in pattern.finditer(content)]
@@ -323,10 +336,15 @@ def count_terms_batch(
     corpus: dict[str, str], terms: list[str]
 ) -> dict[str, tuple[int, dict[str, int]]]:
     """Count many terms in a single pass per file using a first-token index."""
+    # CJK terms bypass tokenization entirely (see find_term_spans); only
+    # non-CJK terms go through the token-window matching below.
+    cjk_terms = [term for term in terms if _contains_cjk(term)]
+    token_terms = [term for term in terms if not _contains_cjk(term)]
+
     # Pre-compute normalised token sequences for each term.
     term_norms_map: dict[str, list[str]] = {}
     first_idx: dict[str, list[tuple[str, list[str]]]] = defaultdict(list)
-    for term in terms:
+    for term in token_terms:
         norms = _term_norms(term)
         if norms:
             term_norms_map[term] = norms
@@ -335,9 +353,16 @@ def count_terms_batch(
     results: dict[str, tuple[int, dict[str, int]]] = {t: (0, {}) for t in terms}
 
     for rel, content in corpus.items():
+        for term in cjk_terms:
+            count = len(find_term_spans(content, term))
+            if count > 0:
+                total, pf = results[term]
+                pf[rel] = count
+                results[term] = (total + count, pf)
+
         if not SPACY_AVAILABLE:
             # Fall back to per-term regex when spacy is absent.
-            for term in terms:
+            for term in token_terms:
                 count = len(find_term_spans(content, term))
                 if count > 0:
                     total, pf = results[term]
