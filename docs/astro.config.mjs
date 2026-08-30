@@ -38,6 +38,34 @@ export default defineConfig({
 						content: SITE_CONFIG.allowIndexing ? 'index, follow' : 'noindex, nofollow',
 					},
 				},
+				// Starlight 只把上一頁側邊欄的 scrollTop 原封不動貼回來，從來不會
+				// 去找當前頁的項目。規則書拆完常有上百個連結、數十個群組且預設全
+				// 展開，所以從內文連結、搜尋結果或重新整理進來時，高亮的那一項通常
+				// 在視窗外好幾個螢幕的位置。這段補上「不在可視範圍內才置中」。
+				{
+					tag: 'script',
+					content: `(() => {
+	const reveal = () => {
+		for (const pane of document.querySelectorAll('.sidebar-pane')) {
+			const link = pane.querySelector('a[aria-current="page"]');
+			if (!link) continue;
+			const l = link.getBoundingClientRect();
+			const p = pane.getBoundingClientRect();
+			// 版面還沒算好，或該項目已經看得到，就不要動它
+			if (!p.height || (l.top >= p.top && l.bottom <= p.bottom)) continue;
+			// 直接改容器的 scrollTop，不用 scrollIntoView——後者會連整頁一起捲
+			pane.scrollTop += l.top - p.top - (p.height - l.height) / 2;
+		}
+	};
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', reveal);
+	} else {
+		reveal();
+	}
+	// 日後若啟用 view transitions 也能沿用
+	document.addEventListener('astro:page-load', reveal);
+})();`,
+				},
 			],
 			defaultLocale: 'root',
 			locales: {
